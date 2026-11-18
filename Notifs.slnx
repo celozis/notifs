@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Notifs.App/Notifs.App.csproj" />
+    <Project Path="src/Notifs.Core/Notifs.Core.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Notifs.Scenarios/Notifs.Scenarios.csproj" />
+  </Folder>
+</Solution>

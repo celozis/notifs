@@ -1,0 +1,88 @@
+using System.Windows;
+using System.IO;
+using System.Windows.Documents;
+using Notifs.App;
+using Notifs.Core;
+
+namespace Notifs.Scenarios;
+
+internal static class Program
+{
+    [STAThread]
+    private static int Main()
+    {
+        var directory = Path.Combine(Path.GetTempPath(), "Notifs.Scenarios", Guid.NewGuid().ToString("N"));
+        try
+        {
+            var clock = new ManualClock(new DateTimeOffset(2026, 11, 18, 10, 0, 0, TimeSpan.Zero));
+            var path = Path.Combine(directory, "tasks.db");
+            var tasks = new TaskService(path, clock);
+            tasks.Initialize();
+            Check(tasks.List().Count == 0 && tasks.List(true).Count == 0, "clean database starts empty");
+            const string markdown = "# План\n\n- **Купить** продукты\n- *Отдохнуть*\n\n```csharp\nvar x = 1;\n```\n\n![offline](https://invalid.example/image.png)\n<script>not executable</script>";
+            try { tasks.Create(" \t\n", markdown); throw new Exception("blank title accepted"); }
+            catch (ArgumentException) { }
+            Check(tasks.List().Count == 0, "invalid create makes no record");
+            var task = tasks.Create("  Подготовить ужин  ", markdown);
+            Check(task.Title == "Подготовить ужин" && task.CreatedAt == clock.GetUtcNow(), "creation trims title and uses supplied clock");
+            clock.Advance(TimeSpan.FromDays(3));
+            try { tasks.Edit(task.Id, " ", "lost"); throw new Exception("invalid edit accepted"); }
+            catch (ArgumentException) { }
+            Check(tasks.List().Single().Description == markdown, "invalid edit preserves original record");
+            tasks.Edit(task.Id, "Ужин на двоих ' ; --", markdown + "\nГотовим вместе");
+            var reopened = new TaskService(path, clock);
+            reopened.Initialize();
+            var edited = reopened.List().Single();
+            Check(edited.CreatedAt == task.CreatedAt && edited.Description.EndsWith("Готовим вместе"), "edit persists across connection reopen without changing creation time");
+            Check(edited.Title == "Ужин на двоих ' ; --", "title safely round-trips SQL punctuation");
+            reopened.Complete(task.Id);
+            var completed = new TaskService(path, clock).List(true).Single();
+            Check(reopened.List().Count == 0 && completed.CompletedAt == clock.GetUtcNow(), "completion moves task to persistent history");
+            clock.Advance(TimeSpan.FromDays(1));
+            reopened.Complete(task.Id);
+            Check(reopened.List(true).Single().CompletedAt == completed.CompletedAt, "repeated completion preserves completion timestamp");
+            reopened.Edit(task.Id, "Завершённый ужин", markdown);
+            Check(reopened.List(true).Single().CreatedAt == task.CreatedAt, "editing history preserves creation time and state");
+            reopened.Restore(task.Id);
+            var restored = new TaskService(path, clock).List().Single();
+            Check(restored.CompletedAt is null && restored.CreatedAt == task.CreatedAt && reopened.List(true).Count == 0, "restore persists original task and creation time");
+            try { reopened.Restore(Guid.NewGuid()); throw new Exception("missing id accepted"); }
+            catch (KeyNotFoundException) { }
+            var later = reopened.Create("Следующее дело", "");
+            Check(reopened.List().Select(x => x.Id).SequenceEqual(new[] { task.Id, later.Id }), "active tasks ordered oldest first");
+
+            var app = new Application();
+            app.Resources.MergedDictionaries.Add(new ResourceDictionary { Source = new Uri("/Notifs.App;component/Theme.xaml", UriKind.Relative) });
+            var view = new MarkdownView { Source = markdown };
+            var blocks = view.Document.Blocks.ToArray();
+            Check(blocks.OfType<Paragraph>().Any(p => p.FontSize == 26), "Markdown heading is formatted natively");
+            Check(blocks.OfType<System.Windows.Documents.List>().Single().ListItems.Count == 2, "Markdown list becomes native list");
+            var listText = blocks.OfType<System.Windows.Documents.List>().Single().ListItems.FirstListItem.Blocks.OfType<Paragraph>().Single();
+            Check(listText.Inlines.OfType<Bold>().Any(), "Markdown emphasis becomes bold text");
+            Check(blocks.OfType<Paragraph>().Any(p => p.FontFamily.Source == "Consolas"), "code block uses monospace text");
+            var text = new TextRange(view.Document.ContentStart, view.Document.ContentEnd).Text;
+            Check(text.Contains("var x = 1;") && text.Contains("[изображение]") && text.Contains("not executable"), "code retained; remote image and raw HTML stay inert text");
+            var editor = new EditorViewModel(reopened, null) { Description = markdown };
+            editor.SaveCommand.Execute(null); // Invalid title is synchronous, no dispatcher pump needed.
+            Check(editor.HasError && editor.Description == markdown && reopened.List().Count == 2, "invalid UI submission retains Markdown and creates nothing");
+            Console.WriteLine("All 17 application and rendering checks passed.");
+            return UiScenario.Run(app, Path.Combine(directory, "ui.db"));
+        }
+        catch (Exception ex) { Console.Error.WriteLine(ex); return 1; }
+        finally
+        {
+            Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();
+            if (Directory.Exists(directory)) Directory.Delete(directory, true);
+        }
+    }
+    private static void Check(bool condition, string message)
+    {
+        if (!condition) throw new Exception(message);
+        Console.WriteLine("PASS " + message);
+    }
+    private sealed class ManualClock(DateTimeOffset now) : TimeProvider
+    {
+        public override DateTimeOffset GetUtcNow() => now;
+        public void Advance(TimeSpan amount) => now += amount;
+    }
+}
