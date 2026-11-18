@@ -1,0 +1,226 @@
+<!-- Throwaway design comparison: four Notifs directions, one-window navigation, in-memory sample data. -->
+<div id="notifs-concepts">
+  <div class="viz-carousel" aria-label="Варианты оформления Notifs" data-previous-label="Предыдущий вариант" data-next-label="Следующий вариант">
+    <section data-variant="Глубокий синий" aria-label="Синий интерфейс со списком и подробностями"><div class="nf-app nf-blue" data-concept="blue"></div></section>
+    <section data-variant="Тёплый песок" aria-label="Тёплый коричневый интерфейс в стиле ежедневника" hidden><div class="nf-app nf-sand" data-concept="sand"></div></section>
+    <section data-variant="Графит и янтарь" aria-label="Графитовый интерфейс с фокусом на ближайшей задаче" hidden><div class="nf-app nf-graphite" data-concept="graphite"></div></section>
+    <section data-variant="Слива и лаванда" aria-label="Сливовый интерфейс с календарём недели" hidden><div class="nf-app nf-plum" data-concept="plum"></div></section>
+  </div>
+</div>
+<style>
+#notifs-concepts {width:100%;min-width:0}
+#notifs-concepts [hidden] {display:none!important}
+#notifs-concepts .nf-app {--nf-bg:#14243b;--nf-rail:#101d31;--nf-panel:#1a304d;--nf-raised:#203c5d;--nf-text:#edf4ff;--nf-muted:#afc0d8;--nf-line:#36516e;--nf-accent:#83bafa;--nf-on:#10223a;--nf-soft:#294969;--nf-danger:#ffb3a7;--nf-warn:#f5cf90;--nf-good:#a9d0b1;--nf-round:14px;background:var(--nf-bg);color:var(--nf-text);font:16px/1.5 "Segoe UI",Arial,sans-serif;border:1px solid var(--nf-line);border-radius:14px;overflow:hidden;min-width:0;color-scheme:dark;isolation:isolate}
+#notifs-concepts .nf-sand {--nf-bg:#cbb69d;--nf-rail:#bba286;--nf-panel:#e4d6c3;--nf-raised:#ecdfcf;--nf-text:#30271f;--nf-muted:#493628;--nf-line:#a38c72;--nf-accent:#53416f;--nf-on:#fff8ed;--nf-soft:#d9c9b6;--nf-danger:#8a302b;--nf-warn:#77430d;--nf-good:#34523e;--nf-round:9px;color-scheme:light}
+#notifs-concepts .nf-graphite {--nf-bg:#20211f;--nf-rail:#171916;--nf-panel:#282b26;--nf-raised:#32362e;--nf-text:#f1f0e6;--nf-muted:#b9bcae;--nf-line:#4a5044;--nf-accent:#e5b666;--nf-on:#292117;--nf-soft:#3e382b;--nf-danger:#f6aaa1;--nf-warn:#e5b666;--nf-good:#b9cd9a;--nf-round:8px}
+#notifs-concepts .nf-plum {--nf-bg:#282236;--nf-rail:#201b2c;--nf-panel:#332c43;--nf-raised:#403650;--nf-text:#f5effc;--nf-muted:#c6b7d6;--nf-line:#5c4c70;--nf-accent:#c2a9ef;--nf-on:#292036;--nf-soft:#49395d;--nf-danger:#ffb2bb;--nf-warn:#eac58b;--nf-good:#c3d5b5;--nf-round:18px}
+#notifs-concepts .nf-app * {box-sizing:border-box}
+#notifs-concepts .nf-app h1,#notifs-concepts .nf-app h2,#notifs-concepts .nf-app h3,#notifs-concepts .nf-app p {margin:0;color:inherit;font-family:inherit}
+#notifs-concepts .nf-app h1 {font-size:30px;font-weight:600;line-height:1.22;letter-spacing:-.7px}
+#notifs-concepts .nf-app h2 {font-size:23px;font-weight:600;line-height:1.3;letter-spacing:-.3px}
+#notifs-concepts .nf-app h3 {font-size:17px;font-weight:600;line-height:1.4}
+#notifs-concepts .nf-app button,#notifs-concepts .nf-app input,#notifs-concepts .nf-app textarea,#notifs-concepts .nf-app select {font:inherit;color:inherit;min-width:0}
+#notifs-concepts .nf-app button {border:0;background:none;cursor:pointer;transition:background .16s ease,border-color .16s ease,color .16s ease;text-align:left}
+#notifs-concepts .nf-app button:focus-visible,#notifs-concepts .nf-app input:focus-visible,#notifs-concepts .nf-app textarea:focus-visible,#notifs-concepts .nf-app select:focus-visible {outline:2px solid var(--nf-accent);outline-offset:3px}
+#notifs-concepts .nf-app button:active {filter:brightness(.9)}
+#notifs-concepts .nf-app button:hover {background:var(--nf-soft)}
+#notifs-concepts .nf-app button:disabled {opacity:.45;cursor:default}
+#notifs-concepts .nf-app svg {flex:none}
+#notifs-concepts .nf-app :is(h1,h2,h3,p,span,button) {overflow-wrap:anywhere}
+#notifs-concepts .nf-windowbar {display:flex;align-items:center;justify-content:space-between;gap:12px;height:38px;padding:0 20px;background:var(--nf-rail);border-bottom:1px solid var(--nf-line);color:var(--nf-muted);font-size:12px;letter-spacing:.4px}
+#notifs-concepts .nf-windowmarks {display:flex;gap:24px;align-items:center}
+#notifs-concepts .nf-body {display:grid;grid-template-columns:184px minmax(0,1fr);min-height:1040px}
+#notifs-concepts .nf-sidebar {padding:28px 16px 20px;background:var(--nf-rail);border-right:1px solid var(--nf-line);display:flex;flex-direction:column;gap:24px;min-width:0}
+#notifs-concepts .nf-brand {display:flex;align-items:center;gap:10px;padding:0 10px;font-size:25px;font-weight:650;letter-spacing:-.7px}
+#notifs-concepts .nf-brandmark {width:30px;height:34px;border-radius:9px;background:var(--nf-accent);color:var(--nf-on);display:grid;place-items:center}
+#notifs-concepts .nf-sidebar small {display:block;font-size:12px;color:var(--nf-muted);padding:6px 10px 0}
+#notifs-concepts .nf-nav {display:flex;flex-direction:column;gap:6px}
+#notifs-concepts .nf-navbutton {min-height:46px;padding:10px 12px;display:flex;align-items:center;gap:10px;border-radius:9px;font-size:14px!important;white-space:nowrap}
+#notifs-concepts .nf-navbutton[aria-current="page"] {background:var(--nf-soft);color:var(--nf-text);font-weight:600;box-shadow:inset 3px 0 var(--nf-accent)}
+#notifs-concepts .nf-navbutton.nf-new {background:var(--nf-accent);color:var(--nf-on);font-weight:600;margin:0 0 16px;min-height:46px;box-shadow:none}
+#notifs-concepts .nf-navbutton.nf-new:hover {filter:brightness(1.06)}
+#notifs-concepts .nf-navcount {margin-left:auto;font-size:12px}
+#notifs-concepts .nf-sidebarbottom {margin-top:auto;display:grid;gap:16px}
+#notifs-concepts .nf-profile {border-top:1px solid var(--nf-line);padding:18px 8px 0;display:flex;gap:10px;align-items:center;font-size:13px}
+#notifs-concepts .nf-avatar {width:32px;height:32px;border-radius:50%;background:var(--nf-soft);color:var(--nf-accent);display:grid;place-items:center;font-size:13px}
+#notifs-concepts .nf-muted {color:var(--nf-muted)}
+#notifs-concepts .nf-small {font-size:13px;line-height:1.6}
+#notifs-concepts .nf-overline {font-size:11px;font-weight:600;letter-spacing:1.6px;text-transform:uppercase;color:var(--nf-muted);margin-bottom:8px}
+#notifs-concepts .nf-workspace {padding:32px 28px 24px;min-width:0;display:flex;flex-direction:column}
+#notifs-concepts .nf-pagehead {display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:28px}
+#notifs-concepts .nf-pagehead p {font-size:14px;color:var(--nf-muted);margin-top:9px}
+#notifs-concepts .nf-date {white-space:nowrap;border:1px solid var(--nf-line);padding:8px 12px;border-radius:8px;font-size:12px;color:var(--nf-muted)}
+#notifs-concepts .nf-sectiontitle {display:flex;justify-content:space-between;gap:12px;align-items:center;font-size:12px;color:var(--nf-muted);font-weight:600;letter-spacing:.6px;margin-bottom:12px}
+#notifs-concepts .nf-split {display:grid;grid-template-columns:minmax(0,1.08fr) minmax(0,1fr);gap:20px;align-items:start}
+#notifs-concepts .nf-queue {display:grid;gap:10px}
+#notifs-concepts .nf-task {padding:16px;border:1px solid var(--nf-line);border-radius:var(--nf-round);background:var(--nf-panel);min-width:0}
+#notifs-concepts .nf-task.nf-selected {background:var(--nf-raised);border-color:var(--nf-accent)}
+#notifs-concepts .nf-tasktop {display:grid;grid-template-columns:32px minmax(0,1fr);gap:8px;align-items:start}
+#notifs-concepts .nf-check {width:28px;height:28px;min-height:28px;border:1.5px solid var(--nf-muted)!important;border-radius:50%;margin-top:1px;display:grid;place-items:center;color:var(--nf-accent)!important}
+#notifs-concepts .nf-taskname {padding:0;min-height:32px;font-size:15px!important;line-height:1.45;font-weight:550;display:block;width:100%;border-radius:4px}
+#notifs-concepts .nf-meta {display:flex;align-items:center;flex-wrap:wrap;gap:7px;margin-top:12px;font-size:12px;color:var(--nf-muted)}
+#notifs-concepts .nf-rank {display:inline-grid;place-items:center;min-width:23px;height:24px;border-radius:5px;background:var(--nf-soft);font-size:12px;font-weight:700}
+#notifs-concepts .nf-rank[data-rank="S"] {color:var(--nf-danger)}
+#notifs-concepts .nf-rank[data-rank="A"] {color:var(--nf-warn)}
+#notifs-concepts .nf-rank[data-rank="D"] {color:var(--nf-good)}
+#notifs-concepts .nf-separator {color:var(--nf-muted)}
+#notifs-concepts .nf-detail {padding:22px;background:var(--nf-panel);border:1px solid var(--nf-line);border-radius:var(--nf-round)}
+#notifs-concepts .nf-detail h2 {font-size:22px;margin:16px 0 10px}
+#notifs-concepts .nf-tag {display:inline-flex;align-items:center;gap:6px;padding:5px 9px;background:var(--nf-soft);border-radius:6px;color:var(--nf-accent);font-size:11px;font-weight:600;letter-spacing:.3px}
+#notifs-concepts .nf-detailtext {font-size:14px;color:var(--nf-muted);margin:20px 0!important;line-height:1.7}
+#notifs-concepts .nf-facts {margin:20px 0;display:grid;grid-template-columns:1fr 1fr;gap:18px 12px;padding:18px 0;border-top:1px solid var(--nf-line);border-bottom:1px solid var(--nf-line)}
+#notifs-concepts .nf-facts dt {font-size:11px;color:var(--nf-muted);margin-bottom:3px}
+#notifs-concepts .nf-facts dd {font-size:13px;margin:0;font-weight:550}
+#notifs-concepts .nf-actions {display:flex;gap:8px;flex-wrap:wrap;margin-top:20px}
+#notifs-concepts .nf-action {min-height:44px;display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:10px 15px!important;border:1px solid var(--nf-line)!important;border-radius:8px;font-size:13px!important;font-weight:550}
+#notifs-concepts .nf-action.nf-primary {background:var(--nf-accent);border-color:var(--nf-accent)!important;color:var(--nf-on)}
+#notifs-concepts .nf-primary:hover {filter:brightness(1.06)}
+#notifs-concepts .nf-pagenote {display:flex;align-items:center;gap:8px;margin-top:auto;padding-top:26px;font-size:12px;color:var(--nf-muted)}
+#notifs-concepts .nf-inlineheading {margin:26px 0 12px;display:flex;align-items:center;gap:12px;color:var(--nf-muted);font-size:12px;font-weight:600;letter-spacing:1px}
+#notifs-concepts .nf-inlineheading:after {content:"";height:1px;flex:1;background:var(--nf-line)}
+#notifs-concepts .nf-sand .nf-sidebar {padding-top:36px}
+#notifs-concepts .nf-sand h1 {font:40px/1.12 Georgia,"Times New Roman",serif;letter-spacing:-1.2px}
+#notifs-concepts .nf-sand .nf-workspace {padding:36px 36px 24px}
+#notifs-concepts .nf-journalheader {border-bottom:2px solid var(--nf-text);padding-bottom:25px;margin-bottom:4px;display:flex;justify-content:space-between;gap:16px;align-items:end}
+#notifs-concepts .nf-journaldate {font:56px/1 Georgia,serif;color:var(--nf-muted)}
+#notifs-concepts .nf-journaldate span {display:block;font:11px/1.5 "Segoe UI",sans-serif;letter-spacing:2px;margin-top:8px;text-transform:uppercase}
+#notifs-concepts .nf-journalrow {border-bottom:1px solid var(--nf-line);padding:12px 0;display:grid;grid-template-columns:34px minmax(0,1fr) auto;gap:12px;align-items:center}
+#notifs-concepts .nf-journalrow .nf-taskname {font-size:17px!important}
+#notifs-concepts .nf-journalrow .nf-meta {margin-top:6px}
+#notifs-concepts .nf-journalexpanded {grid-column:2/-1;background:var(--nf-panel);padding:14px 18px;margin-top:4px;border-left:3px solid var(--nf-accent)}
+#notifs-concepts .nf-journalexpanded p {font-size:14px;line-height:1.7}
+#notifs-concepts .nf-journalexpanded .nf-facts {margin:8px 0;grid-template-columns:repeat(3,1fr);gap:12px;padding:8px 0}
+#notifs-concepts .nf-graphite .nf-brand {font-weight:700;letter-spacing:-1px}
+#notifs-concepts .nf-graphite .nf-workspace {padding:32px}
+#notifs-concepts .nf-focus {background:var(--nf-panel);border:1px solid var(--nf-line);border-left:4px solid var(--nf-accent);padding:28px;border-radius:8px}
+#notifs-concepts .nf-focus h2 {font-size:30px;max-width:500px;margin:14px 0}
+#notifs-concepts .nf-focusinfo {display:flex;gap:24px;flex-wrap:wrap;margin:20px 0;color:var(--nf-muted);font-size:13px}
+#notifs-concepts .nf-focusinfo strong {display:block;color:var(--nf-text);font-size:18px;font-weight:550;margin-top:2px}
+#notifs-concepts .nf-compactrow {padding:14px 0;border-bottom:1px solid var(--nf-line);display:grid;grid-template-columns:30px minmax(0,1fr) auto;gap:10px;align-items:center}
+#notifs-concepts .nf-compactrow .nf-meta {margin-top:2px}
+#notifs-concepts .nf-compactrow:last-child {border-bottom:0}
+#notifs-concepts .nf-plum .nf-week {margin:0 0 24px}
+#notifs-concepts .nf-week {display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:7px}
+#notifs-concepts .nf-day {border:1px solid var(--nf-line)!important;border-radius:12px;padding:10px 3px!important;min-height:84px;text-align:center!important;background:var(--nf-panel)!important;display:flex;flex-direction:column;align-items:center;gap:5px;font-size:11px!important;color:var(--nf-muted)!important}
+#notifs-concepts .nf-day strong {font-size:22px;line-height:1.2;color:var(--nf-text);font-weight:500}
+#notifs-concepts .nf-day[aria-pressed="true"] {background:var(--nf-accent)!important;color:var(--nf-on)!important;border-color:var(--nf-accent)!important}
+#notifs-concepts .nf-day[aria-pressed="true"] strong {color:var(--nf-on)}
+#notifs-concepts .nf-agenda {display:grid;grid-template-columns:52px minmax(0,1fr);gap:14px;margin-bottom:12px;align-items:start}
+#notifs-concepts .nf-agendatime {font-size:12px;color:var(--nf-muted);padding-top:17px}
+#notifs-concepts .nf-plum .nf-task {border-left:3px solid var(--nf-accent)}
+#notifs-concepts .nf-form {max-width:720px}
+#notifs-concepts .nf-field {display:grid;gap:8px;margin-bottom:22px;font-size:13px;font-weight:550}
+#notifs-concepts .nf-field input,#notifs-concepts .nf-field textarea,#notifs-concepts .nf-field select {width:100%;min-height:46px;border:1px solid var(--nf-muted);border-radius:8px;background:var(--nf-panel);color:var(--nf-text);padding:11px 13px;font-size:15px;line-height:1.5}
+#notifs-concepts .nf-field textarea {min-height:155px;resize:vertical}
+#notifs-concepts .nf-formrow {display:grid;grid-template-columns:1fr 1fr;gap:18px}
+#notifs-concepts .nf-tabs {display:flex;gap:16px;margin-bottom:12px;border-bottom:1px solid var(--nf-line)}
+#notifs-concepts .nf-tab {padding:10px 2px!important;border-bottom:2px solid transparent!important;font-size:13px!important}
+#notifs-concepts .nf-tab[aria-pressed="true"] {border-bottom-color:var(--nf-accent)!important;color:var(--nf-accent)}
+#notifs-concepts .nf-preview {padding:20px;background:var(--nf-panel);border:1px solid var(--nf-line);border-radius:8px;font-size:14px;line-height:1.8;min-height:155px;overflow-wrap:anywhere;margin-bottom:22px}
+#notifs-concepts .nf-preview h2 {margin-bottom:12px}
+#notifs-concepts .nf-preview pre {white-space:pre-wrap;font:13px/1.6 Consolas,monospace;background:var(--nf-soft);padding:12px}
+#notifs-concepts .nf-error {font-size:13px;color:var(--nf-danger);margin-top:6px;font-weight:400}
+#notifs-concepts .nf-settingsrow {display:flex;align-items:center;justify-content:space-between;gap:20px;padding:22px 0;border-bottom:1px solid var(--nf-line)}
+#notifs-concepts .nf-settingsrow p {font-size:13px;color:var(--nf-muted);margin-top:5px}
+#notifs-concepts .nf-settingsrow input {width:22px;height:22px;accent-color:var(--nf-accent)}
+#notifs-concepts .nf-notice {margin:14px 0 0;color:var(--nf-accent);font-size:13px;min-height:20px}
+#notifs-concepts .nf-reminder {padding:20px;border:1px solid var(--nf-line);background:var(--nf-panel);border-radius:var(--nf-round);margin-bottom:12px;display:grid;grid-template-columns:1fr auto;gap:16px;align-items:center}
+#notifs-concepts .nf-reminder p {color:var(--nf-muted);font-size:13px;margin-top:6px}
+#notifs-concepts .nf-notification {max-width:370px;border:1px solid var(--nf-accent);border-radius:var(--nf-round);background:var(--nf-raised);padding:22px;margin-top:24px}
+#notifs-concepts .nf-notification h3 {margin:14px 0 6px}
+#notifs-concepts .nf-notification p {font-size:13px;color:var(--nf-muted)}
+#notifs-concepts .nf-counter {display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;background:var(--nf-soft);border-radius:6px;font-size:12px}
+@media(max-width:850px){#notifs-concepts .nf-body{grid-template-columns:164px minmax(0,1fr)}#notifs-concepts .nf-sidebar{padding-inline:10px}#notifs-concepts .nf-workspace,#notifs-concepts .nf-sand .nf-workspace,#notifs-concepts .nf-graphite .nf-workspace{padding:26px 20px}#notifs-concepts .nf-split{grid-template-columns:1fr}#notifs-concepts .nf-detail{margin-top:4px}#notifs-concepts .nf-date{display:none}#notifs-concepts .nf-body{min-height:1050px}}
+@media(max-width:550px){#notifs-concepts .nf-body{grid-template-columns:1fr;min-height:1250px}#notifs-concepts .nf-sidebar{border-right:0;border-bottom:1px solid var(--nf-line);gap:16px;padding:20px 16px}#notifs-concepts .nf-brand{padding:0}#notifs-concepts .nf-sidebar small,#notifs-concepts .nf-profile{display:none}#notifs-concepts .nf-nav{display:grid;grid-template-columns:1fr 1fr;gap:6px}#notifs-concepts .nf-navbutton.nf-new{grid-column:1/-1;margin-bottom:2px}#notifs-concepts .nf-sidebarbottom{margin-top:0}#notifs-concepts .nf-sidebarbottom .nf-navbutton{min-height:44px}#notifs-concepts .nf-workspace,#notifs-concepts .nf-sand .nf-workspace,#notifs-concepts .nf-graphite .nf-workspace{padding:24px 18px}#notifs-concepts .nf-week{gap:4px}#notifs-concepts .nf-day{min-height:68px;border-radius:8px;padding:8px 0!important}#notifs-concepts .nf-day strong{font-size:18px}#notifs-concepts .nf-day span:last-child{display:none}#notifs-concepts .nf-formrow{grid-template-columns:1fr;gap:0}#notifs-concepts .nf-app h1{font-size:28px}#notifs-concepts .nf-journaldate{font-size:40px}#notifs-concepts .nf-journalrow{grid-template-columns:28px minmax(0,1fr);gap:8px}#notifs-concepts .nf-journalrow>.nf-rank{display:none}#notifs-concepts .nf-journalexpanded{grid-column:1/-1}#notifs-concepts .nf-journalexpanded .nf-facts{grid-template-columns:1fr 1fr}#notifs-concepts .nf-focus{padding:22px}#notifs-concepts .nf-focus h2{font-size:25px}#notifs-concepts .nf-reminder{grid-template-columns:1fr}#notifs-concepts .nf-check{width:32px;height:32px}#notifs-concepts .nf-windowbar{padding-inline:14px}#notifs-concepts .nf-windowmarks{gap:14px}}
+@media(pointer:coarse){#notifs-concepts .nf-check{width:44px;height:44px}#notifs-concepts .nf-tasktop{grid-template-columns:44px 1fr}#notifs-concepts .nf-compactrow,#notifs-concepts .nf-journalrow{grid-template-columns:44px minmax(0,1fr) auto}#notifs-concepts .nf-navbutton{min-height:48px}}
+@media(prefers-reduced-motion:reduce){#notifs-concepts .nf-app *{transition:none!important;animation:none!important}}
+</style>
+<script>
+(() => {
+  const root=document.getElementById('notifs-concepts');
+  const names={blue:'Глубокий синий',sand:'Тёплый песок',graphite:'Графит и янтарь',plum:'Слива и лаванда'};
+  const icon=(name,size=18)=>`<i data-lucide="${name}" aria-hidden="true" style="width:${size}px;height:${size}px"></i>`;
+  const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const sample=[
+    {id:1,title:'Закончить практическую работу',rank:'A',due:'Сегодня, 20:00',estimate:'7 часов',age:'Создана 2 дня назад',day:18,slack:'1 час',description:'## Остался последний шаг\n\n- Проверить расчёты\n- Оформить выводы\n- Отправить преподавателю',done:false},
+    {id:2,title:'Отправить домашнюю работу',rank:'B',due:'Сегодня, 14:00',estimate:'Без оценки',age:'Создана вчера',day:18,slack:'2 часа',description:'Проверить вложения и отправить работу в личном кабинете.',done:false},
+    {id:3,title:'Пройти курс по C#',rank:'B',due:'18 декабря',estimate:'20 часов',age:'Создана 5 дней назад',day:20,slack:'29 дней',description:'## Следующая тема\n\n- Асинхронность\n- Практическое задание',done:false},
+    {id:4,title:'Забрать заказ',rank:'C',due:'Без дедлайна',estimate:'Без оценки',age:'Создана 3 дня назад',day:19,slack:'—',description:'Пункт выдачи рядом с домом. Взять с собой пакет.',done:false},
+    {id:5,title:'Обновить список покупок',rank:'D',due:'Без дедлайна',estimate:'15 минут',age:'Создана вчера',day:18,slack:'—',description:'Паста, томаты, базилик. Проверить, что уже есть дома.',done:false}
+  ];
+  const states=new Map();
+  function refreshIcons(){if(globalThis.lucide)globalThis.lucide.createIcons({attrs:{width:18,height:18,'stroke-width':1.65}});}
+  function rank(t){return `<span class="nf-rank" data-rank="${esc(t.rank)}" aria-label="Ранг ${esc(t.rank)}">${esc(t.rank)}</span>`;}
+  function meta(t){return `<div class="nf-meta">${rank(t)}<span>${esc(t.due)}</span><span class="nf-separator">·</span><span>${esc(t.estimate)}</span></div>`;}
+  function check(t){return `<button type="button" class="nf-check" data-action="complete" data-id="${t.id}" aria-label="${t.done?'Вернуть в работу':'Выполнить'}: ${esc(t.title)}">${t.done?icon('check',15):''}</button>`;}
+  function taskCard(t,state){return `<article class="nf-task ${state.selected===t.id?'nf-selected':''}"><div class="nf-tasktop">${check(t)}<div><button type="button" class="nf-taskname" data-action="select" data-id="${t.id}">${esc(t.title)}</button>${meta(t)}</div></div></article>`;}
+  function detail(t){if(!t)return `<section class="nf-detail"><h2>Планы на своём месте</h2><p class="nf-detailtext">Выберите задачу из списка.</p></section>`;return `<section class="nf-detail"><span class="nf-tag">${icon('file-text',13)} ПОДРОБНОСТИ</span><h2>${esc(t.title)}</h2><p class="nf-small nf-muted">${esc(t.age)}</p><dl class="nf-facts"><div><dt>Дедлайн</dt><dd>${esc(t.due)}</dd></div><div><dt>Оценка</dt><dd>${esc(t.estimate)}</dd></div><div><dt>Запас времени</dt><dd>${esc(t.slack)}</dd></div><div><dt>Важность</dt><dd>Ранг ${esc(t.rank)}</dd></div></dl><div class="nf-small nf-muted">${markdown(t.description)}</div><div class="nf-actions"><button type="button" class="nf-action nf-primary" data-action="complete" data-id="${t.id}">${icon(t.done?'rotate-ccw':'check',16)}${t.done?'В работу':'Готово'}</button><button type="button" class="nf-action" data-action="edit" data-id="${t.id}">${icon('pencil',15)}Изменить</button></div></section>`;}
+  function markdown(text){return esc(text).split('\n').map(line=>line.startsWith('## ')?`<h3>${line.slice(3)}</h3>`:line.startsWith('# ')?`<h2>${line.slice(2)}</h2>`:line.startsWith('- ')?`<div>• ${line.slice(2)}</div>`:`<p>${line||'<br>'}</p>`).join('').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>');}
+  function blueHome(state,items){return `<div class="nf-pagehead"><div><div class="nf-overline">Среда, 18 ноября</div><h1>Мои задачи</h1><p>Главное — перед глазами. Остальное подождёт.</p></div><span class="nf-date">Ноябрь 2026</span></div><div class="nf-split"><div><div class="nf-sectiontitle"><span>ПО ПОРЯДКУ СРОЧНОСТИ</span><span>${items.length}</span></div><div class="nf-queue">${items.map(t=>taskCard(t,state)).join('')}</div></div>${detail(items.find(t=>t.id===state.selected)||items[0])}</div>`;}
+  function sandHome(state,items){return `<div class="nf-journalheader"><div><div class="nf-overline">Личный ежедневник</div><h1>Дела, которым<br>стоит уделить время.</h1><p class="nf-small nf-muted" style="margin-top:14px">${items.length} задач · в своём темпе</p></div><div class="nf-journaldate">18<span>Ноября · среда</span></div></div><div class="nf-inlineheading">На первом плане</div>${items.map(t=>`<article class="nf-journalrow">${check(t)}<div><button type="button" class="nf-taskname" data-action="select" data-id="${t.id}">${esc(t.title)}</button><div class="nf-meta"><span>${esc(t.due)}</span><span>·</span><span>${esc(t.estimate)}</span></div></div>${rank(t)}${state.selected===t.id?`<div class="nf-journalexpanded"><div class="nf-small nf-muted">${markdown(t.description)}</div><dl class="nf-facts"><div><dt>Создание</dt><dd>${esc(t.age.replace('Создана ',''))}</dd></div><div><dt>Запас времени</dt><dd>${esc(t.slack)}</dd></div><div><dt>Важность</dt><dd>Ранг ${esc(t.rank)}</dd></div></dl><button type="button" class="nf-action" data-action="edit" data-id="${t.id}">${icon('pencil',15)}Редактировать</button></div>`:''}</article>`).join('')}`;}
+  function graphiteHome(state,items){const t=items.find(t=>t.id===state.selected)||items[0];return `<div class="nf-pagehead"><div><div class="nf-overline">Среда / 18 ноября</div><h1>Одно дело за раз.</h1><p>Понятный порядок, спокойный фокус.</p></div><span class="nf-counter">${items.length}</span></div>${t?`<section class="nf-focus"><span class="nf-tag">${icon('arrow-up-right',14)} СЕЙЧАС ВАЖНЕЕ</span><h2>${esc(t.title)}</h2><p class="nf-small nf-muted">${esc(t.age)}</p><div class="nf-focusinfo"><span>Дедлайн<strong>${esc(t.due)}</strong></span><span>На всю работу<strong>${esc(t.estimate)}</strong></span><span>Запас<strong>${esc(t.slack)}</strong></span></div><div class="nf-actions"><button type="button" class="nf-action nf-primary" data-action="complete" data-id="${t.id}">${icon('check',16)}Готово</button><button type="button" class="nf-action" data-action="edit" data-id="${t.id}">Открыть задачу ${icon('arrow-up-right',15)}</button></div></section>`:''}<div class="nf-inlineheading">Дальше по списку</div>${items.filter(x=>x!==t).map(x=>`<article class="nf-compactrow">${check(x)}<div><button type="button" class="nf-taskname" data-action="select" data-id="${x.id}">${esc(x.title)}</button><div class="nf-meta"><span>${esc(x.due)}</span><span>·</span><span>${esc(x.estimate)}</span></div></div>${rank(x)}</article>`).join('')}`;}
+  function week(state){return `<div class="nf-week">${['ПН','ВТ','СР','ЧТ','ПТ','СБ','ВС'].map((label,i)=>`<button type="button" class="nf-day" data-action="day" data-day="${16+i}" aria-pressed="${state.day===16+i}" aria-label="${16+i} ноября"><span>${label}</span><strong>${16+i}</strong><span>${i===2?'Сегодня':i<5?'Ноябрь':'Выходной'}</span></button>`).join('')}</div>`;}
+  function plumHome(state,items){const filtered=state.wholeWeek?items:items.filter(t=>t.day===state.day);return `<div class="nf-pagehead"><div><div class="nf-overline">Ноябрь 2026</div><h1>Неделя в твоём ритме</h1><p>Все дела рядом с днём, к которому относятся.</p></div></div>${week(state)}<div class="nf-sectiontitle"><span>${state.wholeWeek?'16–22 НОЯБРЯ':state.day+' НОЯБРЯ'} · ${filtered.length} ЗАДАЧИ</span><button type="button" class="nf-action" data-action="week">${icon('arrow-right',14)}Вся неделя</button></div>${filtered.map(t=>`<div class="nf-agenda"><span class="nf-agendatime">${esc(t.due.includes('Сегодня')?t.due.split(', ')[1]:t.due==='Без дедлайна'?'Без срока':'День')}</span>${taskCard(t,state)}</div>`).join('')}${filtered.length===0?'<p class="nf-muted nf-small">На этот день задач нет. Можно выбрать другой день или всю неделю.</p>':''}${state.detailOpen?detail(items.find(t=>t.id===state.selected)):''}`;}
+  function pageHeader(title,subtitle){return `<div class="nf-pagehead"><div><div class="nf-overline">Личное пространство</div><h1>${title}</h1><p>${subtitle}</p></div></div>`;}
+  function formView(state){const d=state.draft;return `${pageHeader(state.editId?'Редактировать задачу':'Новое дело','Название — сейчас. Подробности — по желанию.')}<form class="nf-form" novalidate><label class="nf-field">Название задачи *<input name="title" aria-required="true" value="${esc(d.title)}" placeholder="Например, подготовить практическую" ${state.error?'aria-invalid="true" aria-describedby="'+state.key+'-error"':''}>${state.error?`<span class="nf-error" id="${state.key}-error" role="alert">Введите название — описание останется на месте.</span>`:''}</label><div class="nf-formrow"><label class="nf-field">Дедлайн<input type="date" name="date" value="${esc(d.date)}"></label><label class="nf-field">Оценка длительности<input name="estimate" value="${esc(d.estimate)}" placeholder="Например, 2 часа"></label></div><div class="nf-formrow"><label class="nf-field">Время дедлайна<input type="time" name="time" value="${esc(d.time)}"></label><label class="nf-field">Ранг важности<select name="rank">${['S','A','B','C','D'].map(r=>`<option ${r===d.rank?'selected':''}>${r}</option>`).join('')}</select></label></div><div class="nf-tabs"><button type="button" class="nf-tab" data-action="source" aria-pressed="${!state.preview}">Описание · Markdown</button><button type="button" class="nf-tab" data-action="preview" aria-pressed="${state.preview}">Просмотр</button></div>${state.preview?`<div class="nf-preview">${d.description?markdown(d.description):'<p class="nf-muted">Здесь появится описание задачи.</p>'}</div>`:`<label class="nf-field"><span class="nf-small nf-muted">Заметки, списки, важные детали</span><textarea name="description" placeholder="Что нужно сделать?">${esc(d.description)}</textarea></label>`}<div class="nf-actions"><button type="button" class="nf-action nf-primary" data-action="save">${icon('check',16)}Сохранить задачу</button><button type="button" class="nf-action" data-action="nav" data-page="tasks">К моим задачам</button></div></form>`;}
+  function remindersView(state){return `${pageHeader('Напоминания','Небольшие сигналы, которые возвращают к важному.')}<article class="nf-reminder"><div><h3>Размяться и отдохнуть от экрана</h3><p>Простой сигнал · каждый час, в :00</p></div><button type="button" class="nf-action" data-action="toggle-reminder">${state.reminderOn?'Включено':'Выключено'}</button></article><article class="nf-reminder"><div><h3>Сменить постельное бельё</h3><p>С подтверждением · через 2 недели после выполнения</p></div><button type="button" class="nf-action" data-action="reminder-done">Готово</button></article><div class="nf-inlineheading">Карточка напоминания</div><div class="nf-notification"><span class="nf-tag">${icon('bell',13)} NOTIFS</span><h3>Вернуться к практической работе</h3><p>Создана 2 дня назад · дедлайн сегодня, 20:00</p><div class="nf-actions"><button type="button" class="nf-action nf-primary" data-action="notification-done">Готово</button><button type="button" class="nf-action" data-action="snooze">На 30 минут</button></div></div>`;}
+  function settingsView(state){return `${pageHeader('Настройки','Приложение подстраивается под твой день.')}<div class="nf-form"><label class="nf-settingsrow"><span><strong>Запускать вместе с Windows</strong><p>Чтобы напоминания всегда были рядом.</p></span><input type="checkbox" name="autorun" ${state.autorun?'checked':''}></label><label class="nf-settingsrow"><span><strong>Периодическая сводка</strong><p>Напоминать о незавершённых задачах каждые 3 часа.</p></span><input type="checkbox" name="summary" ${state.summary?'checked':''}></label><label class="nf-field" style="margin-top:26px">Монитор уведомлений<select name="monitor"><option>Автоматически</option><option>Основной монитор</option><option>Дополнительный монитор</option></select></label><p class="nf-small nf-muted">Когда на основном мониторе открыта игра или полноэкранное видео, карточки переходят на дополнительный экран.</p></div>`;}
+  function render(app,state){
+    const items=state.tasks.filter(t=>!t.done);
+    const nav=(page,label,symbol,extra='')=>`<button type="button" class="nf-navbutton ${page==='new'?'nf-new':''}" data-action="nav" data-page="${page}" ${state.page===page?'aria-current="page"':''}>${icon(symbol)}<span>${label}</span>${extra}</button>`;
+    let content;
+    if(state.page==='new')content=formView(state);
+    else if(state.page==='history'){const done=state.tasks.filter(t=>t.done);content=pageHeader('История','То, что уже получилось сделать.')+(done.length?`<div class="nf-queue">${done.map(t=>taskCard(t,state)).join('')}</div>`:'<p class="nf-muted">Выполненные задачи останутся здесь. Любую можно вернуть в работу.</p>');}
+    else if(state.page==='reminders')content=remindersView(state);
+    else if(state.page==='settings')content=settingsView(state);
+    else if(state.page==='calendar')content=pageHeader('Календарь','Выбирай день или просматривай неделю целиком.')+week(state)+`<button type="button" class="nf-action" data-action="week">${icon('arrow-right',15)}Выбрать всю неделю</button><div class="nf-inlineheading">${state.wholeWeek?'16–22 ноября':state.day+' ноября'}</div><div class="nf-queue">${items.filter(t=>state.wholeWeek||t.day===state.day).map(t=>taskCard(t,state)).join('')||'<p class="nf-muted">На этот день задач нет.</p>'}</div>`;
+    else content=({blue:blueHome,sand:sandHome,graphite:graphiteHome,plum:plumHome}[state.key])(state,items);
+    app.innerHTML=`<div class="nf-windowbar"><span>notifs / личное пространство</span><span class="nf-windowmarks" aria-hidden="true">${icon('minus',12)}${icon('square',11)}${icon('x',12)}</span></div><div class="nf-body"><aside class="nf-sidebar"><div><div class="nf-brand"><span class="nf-brandmark">${icon('check',21)}</span>notifs</div><small>Твои дела. Твой ритм.</small></div><nav class="nf-nav" aria-label="Разделы приложения">${nav('new','Новая задача','plus')}${nav('tasks','Мои задачи','list-todo',`<span class="nf-navcount">${items.length}</span>`)}${nav('calendar','Календарь','calendar-days')}${nav('reminders','Напоминания','bell')}${nav('history','История','history')}</nav><div class="nf-sidebarbottom">${nav('settings','Настройки','sliders-horizontal')}<div class="nf-profile"><span class="nf-avatar">${icon('user-round',16)}</span><div>Моё пространство<br><span class="nf-muted nf-small">На этом компьютере</span></div></div></div></aside><main class="nf-workspace">${content}<p class="nf-notice" role="status" aria-live="polite">${esc(state.notice)}</p><div class="nf-pagenote">${icon('hard-drive',14)}Задачи и заметки в одном месте</div></main></div>`;
+    refreshIcons();
+  }
+  root.querySelectorAll('[data-concept]').forEach(app=>{
+    const key=app.dataset.concept;
+    app.setAttribute('aria-label',names[key]);
+    const state={key,page:'tasks',tasks:sample.map(t=>({...t})),selected:1,day:18,wholeWeek:false,detailOpen:false,notice:'',editId:null,error:false,preview:false,reminderOn:true,summary:true,autorun:true,draft:{title:'',description:'',date:'',time:'',estimate:'',rank:'B'}};
+    states.set(key,state);render(app,state);
+    const draft=()=>{app.querySelectorAll('input[name],textarea[name],select[name]').forEach(field=>{if(Object.hasOwn(state.draft,field.name))state.draft[field.name]=field.value;});};
+    app.addEventListener('input',()=>{if(state.page==='new')draft();});
+    app.addEventListener('change',event=>{const name=event.target.name;if(['summary','autorun'].includes(name))state[name]=event.target.checked;});
+    app.addEventListener('click',event=>{
+      const button=event.target.closest('button[data-action]');if(!button||!app.contains(button))return;
+      if(state.page==='new')draft();
+      const action=button.dataset.action;if(action==='save'){saveForm();return;}const item=state.tasks.find(t=>t.id===Number(button.dataset.id));
+      state.notice='';
+      if(action==='nav'){state.page=button.dataset.page;if(state.page==='new'){if(state.editId){state.editId=null;state.draft={title:'',description:'',date:'',time:'',estimate:'',rank:'B'};}state.error=false;}}
+      else if(action==='select'&&item){state.selected=item.id;state.detailOpen=!state.detailOpen;if(state.page==='history'){state.notice='Чтобы вернуть задачу в работу, нажмите галочку слева.';}}
+      else if(action==='complete'&&item){item.done=!item.done;state.notice=item.done?'Задача выполнена. Она доступна в истории.':'Задача возвращена в работу.';if(state.selected===item.id)state.selected=state.tasks.find(t=>!t.done)?.id??null;}
+      else if(action==='edit'&&item){state.editId=item.id;state.draft={title:item.title,description:item.description,estimate:item.estimate==='Без оценки'?'':item.estimate,rank:item.rank,date:item.due.startsWith('Сегодня')?'2026-11-18':'',time:item.due.startsWith('Сегодня')?item.due.split(', ')[1]:''};state.page='new';state.preview=false;state.error=false;}
+      else if(action==='preview')state.preview=true;
+      else if(action==='source')state.preview=false;
+      else if(action==='day'){state.day=Number(button.dataset.day);state.wholeWeek=false;}
+      else if(action==='week')state.wholeWeek=true;
+      else if(action==='toggle-reminder')state.reminderOn=!state.reminderOn;
+      else if(action==='reminder-done')state.notice='Выполнено. Следующее дело — через две недели.';
+      else if(action==='notification-done'){state.tasks.find(t=>t.id===1).done=true;state.notice='Практическая отмечена выполненной.';}
+      else if(action==='snooze')state.notice='Напомнить через 30 минут.';
+      render(app,state);
+      if(action==='nav'&&state.page==='new')app.querySelector('input[name="title"]')?.focus({preventScroll:true});
+    });
+    function saveForm(){
+      draft();
+      if(!state.draft.title.trim()){state.error=true;render(app,state);app.querySelector('input[name="title"]').focus({preventScroll:true});return;}
+      const existing=state.tasks.find(t=>t.id===state.editId);
+      const data={id:existing?.id??Math.max(0,...state.tasks.map(t=>t.id))+1,title:state.draft.title.trim(),description:state.draft.description,rank:state.draft.rank,due:state.draft.date?(state.draft.date==='2026-11-18'?'Сегодня':state.draft.date.split('-').reverse().join('.'))+(state.draft.time?', '+state.draft.time:''):'Без дедлайна',estimate:state.draft.estimate||'Без оценки',age:existing?.age??'Создана только что',slack:'—',day:state.draft.date?Number(state.draft.date.slice(-2)):18,done:existing?.done??false};
+      if(existing)Object.assign(existing,data);else state.tasks.push(data);
+      state.selected=data.id;state.page=data.done?'history':'tasks';state.notice=existing?'Изменения сохранены.':'Новая задача добавлена.';state.editId=null;state.error=false;state.draft={title:'',description:'',date:'',time:'',estimate:'',rank:'B'};render(app,state);
+    }
+    app.addEventListener('submit',event=>{event.preventDefault();saveForm();});
+    app.addEventListener('keydown',event=>{if(state.page==='new'&&((event.ctrlKey&&event.key.toLowerCase()==='s')||(event.key==='Enter'&&event.target.tagName==='INPUT'))){event.preventDefault();saveForm();}});
+    if(globalThis.Tweak){
+      const options={accent:getComputedStyle(app).getPropertyValue('--nf-accent').trim(),radius:parseInt(getComputedStyle(app).getPropertyValue('--nf-round'))};
+      const tweak=new globalThis.Tweak({container:app,onChange:()=>{app.style.setProperty('--nf-accent',options.accent);app.style.setProperty('--nf-round',options.radius+'px');}});
+      tweak.addColorPicker(options,'accent',{label:'Акцент',reference:'--nf-accent'});tweak.addSlider(options,'radius',{label:'Скругления',min:4,max:24,unit:'px'});
+    }
+  });
+})();
+</script>

@@ -1,0 +1,167 @@
+{
+  "errors": [],
+  "results": [
+    {
+      "name": "Application and local icons render",
+      "ok": true
+    },
+    {
+      "name": "Filter panel opens",
+      "ok": true
+    },
+    {
+      "name": "Reverse rank sorting",
+      "ok": true
+    },
+    {
+      "name": "One active with paused task preserved",
+      "ok": true
+    },
+    {
+      "name": "Draft survives navigation",
+      "ok": true
+    },
+    {
+      "name": "Settings survive navigation",
+      "ok": true
+    },
+    {
+      "name": "Month has filter controls",
+      "ok": true
+    },
+    {
+      "name": "Calendar remembers month mode",
+      "ok": true
+    },
+    {
+      "name": "Whole estimated interval included",
+      "ok": true
+    },
+    {
+      "name": "Two persistent cards",
+      "ok": true
+    },
+    {
+      "name": "Third replaces oldest",
+      "ok": true
+    },
+    {
+      "name": "Hover freezes visible cards",
+      "ok": true
+    },
+    {
+      "name": "Hide all clears visibility",
+      "ok": true
+    },
+    {
+      "name": "Check-in offers thirty active minutes",
+      "ok": true
+    },
+    {
+      "name": "Sleep preserves shown notification",
+      "ok": true
+    },
+    {
+      "name": "Extension while paused does not run",
+      "ok": true
+    },
+    {
+      "name": "Thirty minute extension produces next question",
+      "ok": true
+    },
+    {
+      "name": "Resume does not repeat dismissed question",
+      "ok": true
+    },
+    {
+      "name": "Notification remains beyond ten seconds",
+      "ok": true
+    },
+    {
+      "name": "Completion removes matching notification",
+      "ok": true
+    },
+    {
+      "name": "Deletion offers recovery",
+      "ok": true
+    },
+    {
+      "name": "Deletion recovers after restart",
+      "ok": true
+    },
+    {
+      "name": "Bold wraps selected text",
+      "ok": true
+    },
+    {
+      "name": "Bold toggles formatting off",
+      "ok": true
+    },
+    {
+      "name": "Shift eight wraps rather than replaces",
+      "ok": true
+    },
+    {
+      "name": "One undo restores previous text",
+      "ok": true
+    },
+    {
+      "name": "Draft survives simulated restart",
+      "ok": true
+    },
+    {
+      "name": "No horizontal overflow 768",
+      "ok": true
+    },
+    {
+      "name": "No horizontal overflow 375",
+      "ok": true
+    },
+    {
+      "name": "No horizontal overflow 320",
+      "ok": true
+    }
+  ],
+  "contrast": [
+    {
+      "pair": "--nx-ink/--nx-bg",
+      "ratio": 14.13
+    },
+    {
+      "pair": "--nx-muted/--nx-rail",
+      "ratio": 9.46
+    },
+    {
+      "pair": "--nx-muted/--nx-panel",
+      "ratio": 7.64
+    },
+    {
+      "pair": "--nx-muted/--nx-selected",
+      "ratio": 6.41
+    },
+    {
+      "pair": "--nx-on/--nx-accent",
+      "ratio": 8.58
+    },
+    {
+      "pair": "--nx-s-ink/--nx-s",
+      "ratio": 7.73
+    },
+    {
+      "pair": "--nx-a-ink/--nx-a",
+      "ratio": 6.55
+    },
+    {
+      "pair": "--nx-b-ink/--nx-b",
+      "ratio": 6.06
+    },
+    {
+      "pair": "--nx-c-ink/--nx-c",
+      "ratio": 6.31
+    },
+    {
+      "pair": "--nx-d-ink/--nx-d",
+      "ratio": 7.03
+    }
+  ]
+}
