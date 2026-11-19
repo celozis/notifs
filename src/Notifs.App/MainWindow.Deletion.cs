@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Input;
+using System.Windows.Automation;
 
 namespace Notifs.App;
 
@@ -18,16 +19,8 @@ public partial class MainWindow
         {
             var task = editor is null ? model.Selected?.Item : editor.SavedTask;
             if (task is null || editor?.PersistDraft() == false) return;
-            deletingId = task.Id;
             deletingSignal = false;
-            DeleteHeading.Text = "Удалить задачу?";
-            deleteInitiator = Keyboard.FocusedElement;
-            DeleteMessage.Text = $"«{task.Title}» исчезнет из списка и календаря. Последнее удаление можно восстановить.";
-            DeleteError.Text = "";
-            DeleteOverlay.Visibility = Visibility.Visible;
-            Workspace.IsHitTestVisible = Navigation.IsHitTestVisible = false;
-            CommandManager.InvalidateRequerySuggested();
-            LeaveTask.Focus();
+            ShowDeletion(task.Id, "Удалить задачу?", $"«{task.Title}» исчезнет из списка и календаря. Последнее удаление можно восстановить.");
         }, () => (editor is null ? model.HasSelection : editor.CanDelete) && CanNavigate());
         CancelDeleteCommand = new(CloseDelete, () => !model.IsBusy);
         ConfirmDeleteCommand = new(async () =>
@@ -58,10 +51,16 @@ public partial class MainWindow
     private bool signalDeleteBusy;
     private void RequestSignalDeletion(Notifs.Core.SignalReminder item)
     {
-        deletingId = item.Id; deletingSignal = true;
+        deletingSignal = true;
+        ShowDeletion(item.Id, "Удалить напоминание?", $"«{item.Title}» перестанет напоминать. Последнее удаление можно восстановить; расписание вернётся выключенным.");
+    }
+    private void ShowDeletion(Guid id, string heading, string message)
+    {
+        deletingId = id;
         deleteInitiator = Keyboard.FocusedElement;
-        DeleteHeading.Text = "Удалить напоминание?";
-        DeleteMessage.Text = $"«{item.Title}» перестанет напоминать. Последнее удаление можно восстановить; расписание вернётся выключенным.";
+        DeleteHeading.Text = heading;
+        AutomationProperties.SetName(DeleteOverlay, heading);
+        DeleteMessage.Text = message;
         DeleteError.Text = "";
         DeleteOverlay.Visibility = Visibility.Visible;
         Workspace.IsHitTestVisible = Navigation.IsHitTestVisible = false;

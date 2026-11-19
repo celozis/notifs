@@ -12,8 +12,14 @@ public sealed class ReminderDay(DayOfWeek day, string label) : Observable
     public bool Selected { get => selected; set { selected = value; Changed(); } }
 }
 
-public sealed record SignalRow(SignalReminder Item)
+public sealed class SignalRow(SignalReminder item) : Observable
 {
+    public SignalReminder Item { get; private set; } = item;
+    public void Update(SignalReminder value)
+    {
+        Item = value;
+        foreach (var property in new[] { nameof(Item), nameof(Title), nameof(Status), nameof(ToggleLabel), nameof(ScheduleLabel) }) Changed(property);
+    }
     private static readonly string[] Names = ["вс", "пн", "вт", "ср", "чт", "пт", "сб"];
     public string Title => Item.Title;
     public string Status => (Item.Enabled ? "ВКЛЮЧЕНО" : "ВЫКЛЮЧЕНО") + " · ПРОСТОЙ СИГНАЛ";
@@ -50,8 +56,12 @@ public sealed class RemindersViewModel : Observable
     public string Message { get => message; private set { message = value; Changed(); Changed(nameof(HasMessage)); } }
     public bool HasMessage => Message.Length > 0;
     public bool CanRetry { get; private set; }
+    private bool hasError;
+    public bool HasError { get => hasError; private set { hasError = value; Changed(); } }
     public string InvalidField { get; private set; } = "TitleInput";
     public event Action? FocusEditor;
+    public event Action? FocusList;
+    public event Action<Guid>? ToggleSaved;
     public event Action? ValidationFailed;
     public event Action? ChangedStorage;
     public event Action<SignalReminder>? DeleteRequested;
@@ -75,7 +85,8 @@ public sealed class RemindersViewModel : Observable
         ToggleCommand = new(async value =>
         {
             if (value is not SignalRow row) return;
-            await WriteAsync(() => service.SetSignalEnabled(row.Item.Id, !row.Item.Enabled), "Состояние напоминания сохранено");
+            var id = row.Item.Id;
+            if (await WriteAsync(() => service.SetSignalEnabled(id, !row.Item.Enabled), "Состояние напоминания сохранено")) ToggleSaved?.Invoke(id);
         }, () => !IsBusy);
     }
 
@@ -83,8 +94,8 @@ public sealed class RemindersViewModel : Observable
     {
         if (IsBusy) return;
         IsBusy = true;
-        try { Replace(await Task.Run(service.ListSignals)); Message = ""; CanRetry = false; }
-        catch (Exception ex) when (MainViewModel.IsStorageError(ex)) { CanRetry = true; Message = "Не удалось прочитать напоминания. Нажмите «Повторить»."; }
+        try { Replace(await Task.Run(service.ListSignals)); Message = ""; CanRetry = false; HasError = false; FocusList?.Invoke(); }
+        catch (Exception ex) when (MainViewModel.IsStorageError(ex)) { CanRetry = true; HasError = true; Message = "Не удалось прочитать напоминания. Нажмите «Повторить»."; }
         finally { Changed(nameof(CanRetry)); IsBusy = false; }
     }
 
@@ -98,16 +109,16 @@ public sealed class RemindersViewModel : Observable
     private void Edit(SignalReminder? item)
     {
         editingId = item?.Id;
-        var now = DateTime.Now;
+        var now = DateTime.Now.AddMinutes(1);
         Title = item?.Title ?? ""; Description = item?.Description ?? "";
         FirstDate = item?.Schedule.FirstDate.ToString("dd.MM.yyyy") ?? now.ToString("dd.MM.yyyy");
-        FirstTime = item?.Schedule.FirstTime.ToString("HH:mm") ?? now.AddMinutes(1).ToString("HH:mm");
+        FirstTime = item?.Schedule.FirstTime.ToString("HH:mm") ?? now.ToString("HH:mm");
         WeeklyTime = item?.Schedule.WeeklyTime.ToString("HH:mm") ?? "15:00";
         Minute = (item?.Schedule.HourlyMinute ?? 0).ToString(CultureInfo.InvariantCulture);
         RepeatIndex = item?.Schedule.Repeat == SignalRepeat.Hourly ? 1 : 0;
         foreach (var day in Days) day.Selected = item?.Schedule.Days.Contains(day.Day) ?? day.Day == DayOfWeek.Monday;
         Enabled = item?.Enabled ?? true;
-        Message = ""; IsEditing = true;
+        Message = ""; HasError = false; IsEditing = true;
         FocusEditor?.Invoke();
     }
 
@@ -138,7 +149,7 @@ public sealed class RemindersViewModel : Observable
             }
             schedule = new(date, start, Hourly ? SignalRepeat.Hourly : SignalRepeat.Weekly, Days.Where(x => x.Selected).Select(x => x.Day).ToArray(), at, atMinute);
         }
-        catch (ArgumentException ex) { Message = ex.Message; ValidationFailed?.Invoke(); return; }
+        catch (ArgumentException ex) { HasError = true; Message = ex.Message; ValidationFailed?.Invoke(); return; }
         var savedTitle = Title; var savedDescription = Description; var savedEnabled = Enabled;
         if (await WriteAsync(() => service.SaveSignal(editingId, savedTitle, savedDescription, schedule, savedEnabled), "Напоминание сохранено")) IsEditing = false;
     }
@@ -150,12 +161,12 @@ public sealed class RemindersViewModel : Observable
         {
             var item = await Task.Run(write);
             var index = Signals.ToList().FindIndex(row => row.Item.Id == item.Id);
-            if (index < 0) Signals.Add(new(item)); else Signals[index] = new(item);
+            if (index < 0) Signals.Add(new(item)); else Signals[index].Update(item);
             Changed(nameof(IsEmpty)); Changed(nameof(CountLabel));
-            Message = success; ChangedStorage?.Invoke(); return true;
+            HasError = false; Message = success; ChangedStorage?.Invoke(); return true;
         }
-        catch (ArgumentException ex) { Message = ex.Message; return false; }
-        catch (Exception ex) when (MainViewModel.IsStorageError(ex)) { Message = "Не удалось сохранить напоминание. Ввод остаётся в форме; попробуйте ещё раз."; return false; }
+        catch (ArgumentException ex) { HasError = true; Message = ex.Message; return false; }
+        catch (Exception ex) when (MainViewModel.IsStorageError(ex)) { HasError = true; Message = "Не удалось сохранить напоминание. Ввод остаётся в форме; попробуйте ещё раз."; return false; }
         finally { IsBusy = false; }
     }
 }

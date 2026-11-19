@@ -14,8 +14,10 @@ public partial class RemindersView : UserControl
         InitializeComponent();
         DataContext = model;
         model.FocusEditor += FocusEditor;
+        model.FocusList += FocusList;
+        model.ToggleSaved += FocusToggle;
         model.ValidationFailed += FocusInvalid;
-        Unloaded += (_, _) => { model.FocusEditor -= FocusEditor; model.ValidationFailed -= FocusInvalid; };
+        Unloaded += (_, _) => { model.FocusEditor -= FocusEditor; model.FocusList -= FocusList; model.ToggleSaved -= FocusToggle; model.ValidationFailed -= FocusInvalid; };
         InputBindings.Add(new KeyBinding(model.SaveCommand, Key.S, ModifierKeys.Control));
         SizeChanged += (_, _) =>
         {
@@ -35,6 +37,19 @@ public partial class RemindersView : UserControl
         };
     }
     private void FocusEditor() => Dispatcher.InvokeAsync(() => { EditorScroll.ScrollToTop(); TitleInput.Focus(); }, DispatcherPriority.Input);
+    private void FocusList() => Dispatcher.InvokeAsync(() => NewReminder.Focus(), DispatcherPriority.Input);
+    private void FocusToggle(Guid id) => Dispatcher.InvokeAsync(() => FindToggle(this, id)?.Focus(), DispatcherPriority.Input);
+    private static Button? FindToggle(DependencyObject parent, Guid id)
+    {
+        for (var i = 0; i < System.Windows.Media.VisualTreeHelper.GetChildrenCount(parent); i++)
+        {
+            var child = System.Windows.Media.VisualTreeHelper.GetChild(parent, i);
+            if (child is Button { DataContext: SignalRow row } button && row.Item.Id == id && button.CommandParameter == row &&
+                button.Command is ParameterAsyncCommand && Equals(button.Content, row.ToggleLabel)) return button;
+            if (FindToggle(child, id) is { } found) return found;
+        }
+        return null;
+    }
     private void FocusInvalid()
     {
         if (DataContext is not RemindersViewModel model) return;

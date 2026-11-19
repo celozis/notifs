@@ -74,18 +74,30 @@ internal static partial class UiScenario
         }
         await SizeAsync(main, 1010, 930);
         reminders.EditCommand.Execute(reminders.Signals.Single()); await IdleAsync();
+        reminders.Title = string.Join(" ", Enumerable.Repeat("Длинное название напоминания для проверки переноса", 8));
+        reminders.Description = string.Join("\n", Enumerable.Repeat("Подробный текст сигнала сохраняется без обрезания.", 20));
+        await SizeAsync(main, 320, 930);
+        Assert(((TextBox)view.FindName("TitleInput")).ActualWidth <= ((FrameworkElement)view.FindName("Form")).ActualWidth + 1, "long reminder title wraps within the narrow form");
+        SaveImage(main, "issue-5-long-text.png");
+        reminders.CancelCommand.Execute(null);
+        await SizeAsync(main, 1010, 930);
+        reminders.EditCommand.Execute(reminders.Signals.Single()); await IdleAsync();
         reminders.Title = "Не сохранять";
         reminders.CancelCommand.Execute(null);
         Assert(service.ListSignals().Single().Title.Contains("Размяться"), "cancel leaves the saved rule unchanged");
         reminders.EditCommand.Execute(reminders.Signals.Single()); await IdleAsync();
         reminders.Description = "Ввод переживает ошибку записи";
+        service.DeleteTask(service.Create("Предыдущее удаление", "").Id);
+        await model.LoadAsync();
         using (var connection = new SqliteConnection($"Data Source={databasePath}"))
         {
             connection.Open(); using var command = connection.CreateCommand();
             command.CommandText = "CREATE TRIGGER fail_signal_save BEFORE UPDATE ON signal_reminders BEGIN SELECT RAISE(ABORT,'blocked'); END";
             command.ExecuteNonQuery();
         }
-        reminders.SaveCommand.Execute(null); await UntilAsync(() => !reminders.IsBusy);
+        reminders.SaveCommand.Execute(null);
+        Assert(reminders.IsBusy && !main.RestoreDeletedCommand.CanExecute(null), "shared restoration is blocked while a signal form is saving");
+        await UntilAsync(() => !reminders.IsBusy);
         Assert(reminders.IsEditing && reminders.Description.Contains("ошибку") && reminders.Message.Contains("Не удалось сохранить") && service.ListSignals().Single().Description.Contains("перерыв"), "SQLite write failure retains signal form and previous committed description");
         using (var connection = new SqliteConnection($"Data Source={databasePath}"))
         {
@@ -100,9 +112,20 @@ internal static partial class UiScenario
         SaveImage(output.Window, "issue-5-notifications.png");
         await Task.Delay(10500);
         Assert(output.VisibleEvents.Count == 1 && output.Window.IsVisible, "simple signal stays visible after ten seconds");
+        Descendants<Button>(output.Window).Single(x => Equals(x.Content, "Отложить на 30 мин")).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+        await UntilAsync(() => output.VisibleEvents.Count == 0 && service.ListSignals().Single().SnoozedUntil is not null);
+        clock.Advance(TimeSpan.FromMinutes(30));
+        await runtime.RunOnceAsync();
+        Assert(output.VisibleEvents.Single().Kind == NotificationKind.Signal && service.ListSignals().Single().SnoozedUntil is null, "native signal snooze routes to persisted thirty wall minutes and returns one signal");
         reminders.ToggleCommand.Execute(reminders.Signals.Single());
         await UntilAsync(() => !reminders.IsBusy && !model.IsBusy && output.VisibleEvents.Count == 0);
         Assert(!service.ListSignals().Single().Enabled, "disable saves the schedule and removes its native card");
+        var toggleButton = Descendants<Button>(view).Single(x => Equals(x.Content, "Включить"));
+        toggleButton.Focus();
+        reminders.ToggleCommand.Execute(reminders.Signals.Single());
+        await UntilAsync(() => !reminders.IsBusy && !model.IsBusy);
+        await IdleAsync();
+        Assert(ReferenceEquals(Keyboard.FocusedElement, toggleButton) && toggleButton.IsVisible, "toggle preserves the same row button and keyboard focus");
         reminders.DeleteCommand.Execute(reminders.Signals.Single()); await IdleAsync();
         Assert(((FrameworkElement)main.FindName("DeleteOverlay")).IsVisible && service.ListSignals().Count == 1, "deletion requires confirmation inside the main window");
         SaveImage(main, "issue-5-delete-confirmation.png");
@@ -113,6 +136,7 @@ internal static partial class UiScenario
         main.ConfirmDeleteCommand.Execute(null);
         await UntilAsync(() => service.ListSignals().Count == 0 && !model.IsBusy && !reminders.IsBusy);
         await IdleAsync();
+        Assert(ReferenceEquals(Keyboard.FocusedElement, view.FindName("NewReminder")), "successful deletion returns focus to the surviving new reminder button");
         main.Close();
         service = new TaskService(databasePath, clock);
         model = new MainViewModel(service); main = new MainWindow(model); main.Show();

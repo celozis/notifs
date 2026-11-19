@@ -16,6 +16,7 @@ public partial class MainWindow : Window
     public RelayCommand CancelEditorCommand { get; }
     public RelayCommand SettingsCommand { get; }
     public AsyncCommand RemindersCommand { get; }
+    public RelayCommand RestoreDeletedCommand { get; }
     private RemindersViewModel? reminders;
     private Button? remindersNavigation;
     private readonly MainViewModel model;
@@ -47,6 +48,8 @@ public partial class MainWindow : Window
             AdaptLayout();
         }, CanNavigate);
         RemindersCommand = new(OpenRemindersAsync, CanNavigate);
+        RestoreDeletedCommand = new(() => model.RestoreDeletedCommand.Execute(null),
+            () => CanNavigate() && model.RestoreDeletedCommand.CanExecute(null));
         InitializeComponent();
         DataContext = model;
         AddNavigation("Новая задача", "M9,1 V17 M1,9 H17", NewCommand, primary: true);

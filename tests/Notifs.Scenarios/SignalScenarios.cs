@@ -81,6 +81,24 @@ internal static class SignalScenarios
         var midnight = new SignalSchedule(new(2026, 12, 31), new(23, 1), SignalRepeat.Hourly, [], new(), 0);
         var nextYear = service.SaveSignal(null, "Полночь", "", midnight, true);
         Check(nextYear.NextAt == new DateTimeOffset(2026, 12, 31, 19, 0, 0, TimeSpan.Zero), "hourly :00 crosses the local date and year boundary");
+        service.SetSignalEnabled(weekly.Id, true);
+        clock.Set(new(2026, 11, 30, 10, 0, 0, TimeSpan.Zero));
+        Check(service.PollSignals().Single().Subjects.Single().Key.Id == weekly.Id && service.PollSignals().Count == 0, "weekly signal crosses the week boundary and consumes the next Monday once");
+
+        var oldPath = System.IO.Path.Combine(directory, "signals-v4.db");
+        var old = new TaskService(oldPath, clock); old.Initialize();
+        var existingTask = old.SaveEditor(null, "Задача из v4", "Текст", null, 90, ImportanceRank.A, new(new(2026, 12, 1), new(15, 0), 60));
+        old.SaveDraft(existingTask.Id, draft); old.SaveNotificationSettings(new(false, 15));
+        var previousPersonal = old.ReadPersonal(existingTask.Id);
+        old.DeleteTask(old.Create("Удалённая задача из v4", "").Id);
+        using (var connection = new SqliteConnection($"Data Source={oldPath}"))
+        {
+            connection.Open(); using var command = connection.CreateCommand();
+            command.CommandText = "DROP TABLE signal_reminders; PRAGMA user_version=4"; command.ExecuteNonQuery();
+        }
+        old = new(oldPath, clock); old.Initialize();
+        Check(old.ListAll().Single() == existingTask && old.ReadDraft(existingTask.Id) == draft && old.ReadPersonal(existingTask.Id) == previousPersonal && old.ReadNotificationSettings() == new NotificationSettings(false, 15) && old.DeletedTitle == "Удалённая задача из v4" && old.ListSignals().Count == 0,
+            "v4 migration preserves existing task, draft, personal state, settings and last deletion");
     }
 
     internal sealed class Clock(DateTimeOffset now) : TimeProvider
