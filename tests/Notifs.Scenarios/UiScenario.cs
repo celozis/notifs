@@ -10,15 +10,15 @@ using Notifs.Core;
 
 namespace Notifs.Scenarios;
 
-internal static class UiScenario
+internal static partial class UiScenario
 {
-    public static int Run(Application app, string databasePath)
+    public static int Run(Application app, string databasePath, bool fieldsOnly = false)
     {
         var result = 1;
         app.ShutdownMode = ShutdownMode.OnExplicitShutdown;
         app.Dispatcher.InvokeAsync(async () =>
         {
-            try { await RunAsync(databasePath); result = 0; Console.WriteLine("PASS all WPF scenarios"); }
+            try { if (fieldsOnly) await RunFieldsAsync(databasePath); else await RunAsync(databasePath); result = 0; Console.WriteLine("PASS all requested WPF scenarios"); }
             catch (Exception ex) { Console.Error.WriteLine(ex); }
             finally { app.Shutdown(); }
         });
@@ -212,6 +212,7 @@ internal static class UiScenario
         Assert(Descendants<Button>(largeWindow).Where(x => x.IsVisible).All(x => x.ActualHeight >= 44), "long-list actions retain their target height");
         SaveImage(largeWindow, "large-list.png");
         largeWindow.Close();
+        await RunFieldsAsync(Path.Combine(Path.GetDirectoryName(databasePath)!, "field-ui.db"));
     }
 
     private static async Task ExecuteAsync(ICommand command, MainViewModel model)

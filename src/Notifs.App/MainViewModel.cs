@@ -14,9 +14,11 @@ public abstract class Observable : INotifyPropertyChanged
     protected void Changed([CallerMemberName] string? name = null) => PropertyChanged?.Invoke(this, new(name));
 }
 
-public sealed class TaskRow(TaskItem item) : Observable
+public sealed class TaskRow(TaskItem item, TaskService service) : Observable
 {
     public TaskItem Item { get; private set; } = item;
+    private TaskTiming timing = service.Timing(item);
+    public ImportanceRank Rank => Item.Rank;
     public string Title => Item.Title;
     public string Description => Item.Description;
     public bool IsCompleted => Item.CompletedAt is not null;
@@ -24,19 +26,35 @@ public sealed class TaskRow(TaskItem item) : Observable
     public string StateLabel => IsCompleted ? "Выполнена" : "В работе";
     public string ToggleLabel => IsCompleted ? "В работу" : "Готово";
     public string CheckLabel => IsCompleted ? "✓" : "";
-    public string CreatedLabel => "Создана " + Item.CreatedAt.ToLocalTime().ToString("d MMMM yyyy, HH:mm");
+    public string CreatedLabel => timing.LocalCreatedAt.ToString("d MMMM yyyy, HH:mm");
+    public string DeadlineLabel => Item.Deadline is { } deadline ? deadline.Date.ToString("d MMMM yyyy") + (deadline.Time is { } exact ? ", " + exact.ToString("HH:mm") : " · до конца дня") : "Без дедлайна";
+    public string EstimateLabel => Item.EstimateMinutes is { } minutes ? Duration(TimeSpan.FromMinutes(minutes)) : "Без оценки";
+    public string SlackLabel => timing.Slack is { } slack ? Duration(slack) : "Без дедлайна";
+    public bool IsOverdue => timing.IsOverdue;
+    public bool HasNegativeSlack => IsIncomplete && !IsOverdue && timing.Slack < TimeSpan.Zero;
+    public string UrgencyLabel => IsOverdue ? "Просрочена" : HasNegativeSlack ? "Оценка превышает время до дедлайна" : "";
+    public string MetadataLabel => (Item.Deadline is { } deadline ? deadline.Date.ToString("d MMMM") + (deadline.Time is { } exact ? ", " + exact.ToString("HH:mm") : " · весь день") : "Без дедлайна") + " · " + EstimateLabel;
     public string AgeLabel
     {
         get
         {
-            var days = Math.Max(0, (DateTimeOffset.Now.LocalDateTime.Date - Item.CreatedAt.LocalDateTime.Date).Days);
+            var days = Math.Max(0, (timing.LocalNow.Date - timing.LocalCreatedAt.Date).Days);
             return days switch { 0 => "Создана сегодня", 1 => "Создана вчера", _ => $"Создана {days} дн. назад" };
         }
     }
     public void Update(TaskItem value)
     {
         Item = value;
-        foreach (var name in new[] { nameof(Item), nameof(Title), nameof(Description), nameof(IsCompleted), nameof(IsIncomplete), nameof(StateLabel), nameof(ToggleLabel), nameof(CheckLabel), nameof(CreatedLabel), nameof(AgeLabel) }) Changed(name);
+        timing = service.Timing(value);
+        foreach (var name in new[] { nameof(Item), nameof(Title), nameof(Description), nameof(Rank), nameof(IsCompleted), nameof(IsIncomplete), nameof(StateLabel), nameof(ToggleLabel), nameof(CheckLabel), nameof(CreatedLabel), nameof(AgeLabel), nameof(DeadlineLabel), nameof(EstimateLabel), nameof(SlackLabel), nameof(IsOverdue), nameof(HasNegativeSlack), nameof(UrgencyLabel), nameof(MetadataLabel) }) Changed(name);
+    }
+    public static string Duration(TimeSpan value)
+    {
+        var negative = value < TimeSpan.Zero;
+        var span = value.Duration();
+        var hours = (long)span.TotalHours;
+        var text = hours > 0 ? $"{hours} ч" + (span.Minutes > 0 ? $" {span.Minutes} мин" : "") : span.TotalMinutes >= 1 ? $"{(int)span.TotalMinutes} мин" : span == TimeSpan.Zero ? "0 мин" : "< 1 мин";
+        return (negative ? "−" : "") + text;
     }
 }
 
@@ -53,6 +71,7 @@ public sealed class MainViewModel : Observable
     private string status = "Открываем ваши задачи…";
     private string error = "";
     private TaskFilter filter;
+    private readonly Dictionary<Guid, int> heldPositions = [];
     public ObservableCollection<TaskRow> Tasks { get; } = [];
     public TaskRow? Selected { get => selected; set { selected = value; Changed(); Changed(nameof(HasSelection)); CommandManager.InvalidateRequerySuggested(); } }
     public bool HasSelection => Selected is not null;
@@ -114,8 +133,9 @@ public sealed class MainViewModel : Observable
             all = items.ToList();
             if (reapplyFilter || Tasks.Count == 0)
             {
+                heldPositions.Clear();
                 Tasks.Clear();
-                foreach (var item in all.Where(MatchesFilter)) Tasks.Add(new(item));
+                foreach (var item in all.Where(MatchesFilter)) Tasks.Add(new(item, service));
             }
             else
             {
@@ -125,7 +145,8 @@ public sealed class MainViewModel : Observable
                     if (updated is null) Tasks.Remove(row); else row.Update(updated);
                 }
                 // Newly saved tasks are visible immediately, without moving existing cards.
-                foreach (var item in all.Where(x => x.Id == selectId && Tasks.All(row => row.Item.Id != x.Id))) Tasks.Add(new(item));
+                foreach (var item in all.Where(x => x.Id == selectId && Tasks.All(row => row.Item.Id != x.Id))) Tasks.Add(new(item, service));
+                RefreshTime();
             }
             Selected = Tasks.FirstOrDefault(row => row.Item.Id == id) ?? Tasks.FirstOrDefault();
             Status = "Все изменения сохранены на этом компьютере";
@@ -154,6 +175,7 @@ public sealed class MainViewModel : Observable
             var updated = await Task.Run(() => restore ? service.Restore(row.Item.Id) : service.Complete(row.Item.Id));
             // Update only after SQLite confirms the write; keep the row and its position.
             row.Update(updated);
+            heldPositions.TryAdd(row.Item.Id, Tasks.IndexOf(row));
             var index = all.FindIndex(x => x.Id == updated.Id);
             if (index >= 0) all[index] = updated;
             RefreshLabels();
@@ -168,6 +190,17 @@ public sealed class MainViewModel : Observable
     {
         if (created) { history = false; filter = TaskFilter.All; }
         await LoadAsync(id, created);
+    }
+    public void RefreshTime()
+    {
+        if (IsBusy && all.Count == 0) return;
+        foreach (var row in Tasks) row.Update(row.Item);
+        var available = service.Order(Tasks.Where(x => !heldPositions.ContainsKey(x.Item.Id)).Select(x => x.Item))
+            .Select(item => Tasks.Single(row => row.Item.Id == item.Id)).ToList();
+        foreach (var row in Tasks.Where(x => heldPositions.ContainsKey(x.Item.Id)).OrderBy(x => heldPositions[x.Item.Id]))
+            available.Insert(Math.Min(heldPositions[row.Item.Id], available.Count), row);
+        for (var i = 0; i < available.Count; i++)
+            if (!ReferenceEquals(Tasks[i], available[i])) Tasks.Move(Tasks.IndexOf(available[i]), i);
     }
     private void RefreshLabels()
     {
@@ -186,6 +219,18 @@ public sealed class EditorViewModel : Observable
     private string error = "";
     private bool busy;
     private bool saved;
+    private string deadlineDate;
+    private string deadlineTime;
+    private string estimateHours;
+    private string estimateMinutes;
+    private ImportanceRank rank;
+    public string DeadlineDate { get => deadlineDate; set { deadlineDate = value; FieldChanged(); } }
+    public string DeadlineTime { get => deadlineTime; set { deadlineTime = value; FieldChanged(); } }
+    public string EstimateHours { get => estimateHours; set { estimateHours = value; FieldChanged(); } }
+    public string EstimateMinutes { get => estimateMinutes; set { estimateMinutes = value; FieldChanged(); } }
+    public ImportanceRank Rank { get => rank; set { rank = value; FieldChanged(); } }
+    public IReadOnlyList<ImportanceRank> Ranks { get; } = Enum.GetValues<ImportanceRank>();
+    public string InvalidField { get; private set; } = "TitleInput";
     public event Action<Guid>? Saved;
     public event Action? ValidationFailed;
     public string Heading => original is null ? "Новое дело" : "Редактировать задачу";
@@ -196,7 +241,11 @@ public sealed class EditorViewModel : Observable
     public bool IsBusy { get => busy; private set { busy = value; Changed(); Changed(nameof(CanEdit)); Changed(nameof(SaveLabel)); CommandManager.InvalidateRequerySuggested(); } }
     public bool CanEdit => !IsBusy;
     public string SaveLabel => IsBusy ? "Сохраняем…" : "Сохранить задачу";
-    public bool IsDirty => !saved && (Title != (original?.Title ?? "") || Description != (original?.Description ?? ""));
+    public bool IsDirty => !saved && (Title != (original?.Title ?? "") || Description != (original?.Description ?? "")
+        || DeadlineDate != (original?.Deadline?.Date.ToString("dd.MM.yyyy") ?? "") || DeadlineTime != (original?.Deadline?.Time?.ToString("HH:mm") ?? "")
+        || EstimateHours != OriginalHours || EstimateMinutes != OriginalMinutes || Rank != (original?.Rank ?? ImportanceRank.B));
+    private string OriginalHours => original?.EstimateMinutes is { } minutes ? (minutes / 60).ToString() : "";
+    private string OriginalMinutes => original?.EstimateMinutes is { } minutes ? (minutes % 60).ToString() : "";
     public AsyncCommand SaveCommand { get; }
     public EditorViewModel(TaskService service, TaskItem? original)
     {
@@ -204,12 +253,18 @@ public sealed class EditorViewModel : Observable
         this.original = original;
         title = original?.Title ?? "";
         description = original?.Description ?? "";
+        deadlineDate = original?.Deadline?.Date.ToString("dd.MM.yyyy") ?? "";
+        deadlineTime = original?.Deadline?.Time?.ToString("HH:mm") ?? "";
+        estimateHours = OriginalHours;
+        estimateMinutes = OriginalMinutes;
+        rank = original?.Rank ?? ImportanceRank.B;
         SaveCommand = new(SaveAsync, () => !IsBusy && !saved);
     }
     private async Task SaveAsync()
     {
         Error = "";
-        if (string.IsNullOrWhiteSpace(Title)) { Error = "Введите название задачи. Описание останется на месте."; ValidationFailed?.Invoke(); return; }
+        if (string.IsNullOrWhiteSpace(Title)) { Invalid("TitleInput", "Введите название задачи. Остальные поля останутся на месте."); return; }
+        if (!TryFields(out var deadline, out var estimate)) return;
         var submittedTitle = Title;
         var submittedDescription = Description;
         IsBusy = true;
@@ -217,14 +272,53 @@ public sealed class EditorViewModel : Observable
         {
             var id = await Task.Run(() =>
             {
-                if (original is null) return service.Create(submittedTitle, submittedDescription).Id;
-                service.Edit(original.Id, submittedTitle, submittedDescription);
+                if (original is null) return service.Create(submittedTitle, submittedDescription, deadline, estimate, Rank).Id;
+                service.Edit(original.Id, submittedTitle, submittedDescription, deadline, estimate, Rank);
                 return original.Id;
             });
             saved = true;
             Saved?.Invoke(id);
         }
         catch (Exception ex) when (MainViewModel.IsStorageError(ex)) { Error = "Не удалось сохранить. Проверьте доступ к папке данных и попробуйте ещё раз. Ваш текст остаётся в форме."; }
+        catch (ArgumentException ex)
+        {
+            IsBusy = false;
+            Invalid(deadline?.Time is null ? "DeadlineDateInput" : "DeadlineTimeInput", ex.Message);
+        }
         finally { IsBusy = false; }
+    }
+    private void Invalid(string field, string message) { InvalidField = field; Error = message; ValidationFailed?.Invoke(); }
+    private void FieldChanged([CallerMemberName] string? name = null) { Changed(name); Changed(nameof(IsDirty)); Error = ""; }
+    private bool TryFields(out TaskDeadline? deadline, out int? estimate)
+    {
+        deadline = null; estimate = null;
+        if (string.IsNullOrWhiteSpace(DeadlineDate) && !string.IsNullOrWhiteSpace(DeadlineTime))
+        { Invalid("DeadlineDateInput", "Добавьте дату дедлайна или очистите время."); return false; }
+        if (!string.IsNullOrWhiteSpace(DeadlineDate))
+        {
+            if (!DateOnly.TryParseExact(DeadlineDate.Trim(), "dd.MM.yyyy", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out var date))
+            { Invalid("DeadlineDateInput", "Введите существующую дату в формате ДД.ММ.ГГГГ или очистите поле."); return false; }
+            TimeOnly? exact = null;
+            if (!string.IsNullOrWhiteSpace(DeadlineTime))
+            {
+                if (!TimeOnly.TryParseExact(DeadlineTime.Trim(), "HH:mm", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out var parsed))
+                { Invalid("DeadlineTimeInput", "Введите время от 00:00 до 23:59 или очистите поле."); return false; }
+                exact = parsed;
+            }
+            deadline = new(date, exact);
+        }
+        if (!string.IsNullOrWhiteSpace(EstimateHours) || !string.IsNullOrWhiteSpace(EstimateMinutes))
+        {
+            if (!WholeNumber(EstimateHours, out var hours) || !WholeNumber(EstimateMinutes, out var minutes)
+                || (long)hours * 60 + minutes is <= 0 or > int.MaxValue)
+            { Invalid("EstimateHoursInput", "Введите положительную полную оценку целыми часами и минутами. Очистите оба поля, чтобы снять оценку."); return false; }
+            estimate = hours * 60 + minutes;
+        }
+        return true;
+    }
+    private static bool WholeNumber(string text, out int value)
+    {
+        value = 0;
+        return string.IsNullOrWhiteSpace(text) || int.TryParse(text.Trim(), System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out value);
     }
 }

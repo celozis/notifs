@@ -22,6 +22,7 @@ public partial class MainWindow : Window
     private readonly List<(Button Button, TextBlock Label)> navigation = [];
     private Button? activeNavigation;
     private Button? historyNavigation;
+    private readonly DispatcherTimer timeRefresh = new() { Interval = TimeSpan.FromSeconds(1) };
 
     public MainWindow(MainViewModel model)
     {
@@ -43,6 +44,9 @@ public partial class MainWindow : Window
         InputBindings.Add(new KeyBinding(new RelayCommand(() => editor?.SaveCommand.Execute(null), () => editor?.SaveCommand.CanExecute(null) == true), Key.S, ModifierKeys.Control));
         InputBindings.Add(new KeyBinding(CancelEditorCommand, Key.Escape, ModifierKeys.None));
         Loaded += async (_, _) => await model.LoadAsync();
+        timeRefresh.Tick += (_, _) => { if (!model.IsBusy) model.RefreshTime(); };
+        Loaded += (_, _) => timeRefresh.Start();
+        Closed += (_, _) => timeRefresh.Stop();
         Shell.SizeChanged += (_, _) => AdaptLayout();
         model.PropertyChanged += (_, args) =>
         {

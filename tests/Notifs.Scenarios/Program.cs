@@ -9,11 +9,13 @@ namespace Notifs.Scenarios;
 internal static class Program
 {
     [STAThread]
-    private static int Main()
+    private static int Main(string[] args)
     {
         var directory = Path.Combine(Path.GetTempPath(), "Notifs.Scenarios", Guid.NewGuid().ToString("N"));
         try
         {
+            FieldScenarios.Run(directory);
+            if (args.Contains("--fields")) return 0;
             var clock = new ManualClock(new DateTimeOffset(2026, 11, 18, 10, 0, 0, TimeSpan.Zero));
             var path = Path.Combine(directory, "tasks.db");
             var tasks = new TaskService(path, clock);
@@ -76,7 +78,7 @@ internal static class Program
             editor.SaveCommand.Execute(null); // Invalid title is synchronous, no dispatcher pump needed.
             Check(editor.HasError && editor.Description == markdown && reopened.ListAll().Count == 2, "invalid UI submission retains Markdown and creates nothing");
             Console.WriteLine("All application and rendering checks passed.");
-            return UiScenario.Run(app, Path.Combine(directory, "ui.db"));
+            return UiScenario.Run(app, Path.Combine(directory, "ui.db"), args.Contains("--fields-ui"));
         }
         catch (Exception ex) { Console.Error.WriteLine(ex); return 1; }
         finally
