@@ -1,0 +1,98 @@
+{
+  "capturedOn": "2026-11-19",
+  "source": "Notifs.Scenarios / UiScenario, real WPF with temporary SQLite",
+  "reference": "design-system/notifs/reference/README.md; compare client area without browser preview padding/chrome",
+  "logicalWidths": [
+    1010,
+    768,
+    375,
+    320
+  ],
+  "scale": 1,
+  "screens": [
+    {
+      "file": "tasks.png",
+      "pixelWidth": 1010,
+      "pixelHeight": 1060,
+      "dpi": 96,
+      "sha256": "cc9ecb54fc7b88e72aba89d30c3cc2f9f21032b5e6d68792e176f630df6d3d22"
+    },
+    {
+      "file": "editor.png",
+      "pixelWidth": 1010,
+      "pixelHeight": 1060,
+      "dpi": 96,
+      "sha256": "d248d188b89a1910feed12b5bb593a250ce21f2ffa70b0e683a3020bab975915"
+    },
+    {
+      "file": "editor-invalid.png",
+      "pixelWidth": 1010,
+      "pixelHeight": 1060,
+      "dpi": 96,
+      "sha256": "bfb01e091486a45c91e20369062127e987db122b21fbdc1ff8051fcc4a8e5997"
+    },
+    {
+      "file": "completed-retained.png",
+      "pixelWidth": 1010,
+      "pixelHeight": 1060,
+      "dpi": 96,
+      "sha256": "adc3b5cdf74a581f9eddbd5f42c09a4c3f874d0e181882f67e570c3ad6e2b271"
+    },
+    {
+      "file": "history-empty.png",
+      "pixelWidth": 1010,
+      "pixelHeight": 1060,
+      "dpi": 96,
+      "sha256": "8e62c21fb9d62de30732ed3020ea1ed87040da78682b209a62994882275a1669"
+    },
+    {
+      "file": "width-768.png",
+      "pixelWidth": 768,
+      "pixelHeight": 1060,
+      "dpi": 96,
+      "sha256": "9061a4dcf16c999f42f787a52c9a030b2df171f5aba2059afe03c8da672afe19"
+    },
+    {
+      "file": "width-375.png",
+      "pixelWidth": 375,
+      "pixelHeight": 1060,
+      "dpi": 96,
+      "sha256": "60f9b41abf8cc62a126a6608b0b2a5b6b458d80d4781956d06e889ce52ecdc4b"
+    },
+    {
+      "file": "width-320.png",
+      "pixelWidth": 320,
+      "pixelHeight": 1060,
+      "dpi": 96,
+      "sha256": "8e1a56090e9666033898aab7891693b620fff0246f07ce486cdb2fbe64f8aeb4"
+    },
+    {
+      "file": "detail-320.png",
+      "pixelWidth": 320,
+      "pixelHeight": 1060,
+      "dpi": 96,
+      "sha256": "9204f374bd5b117beba542d16fe8a016e6a81b48b634c4f949805515efcff381"
+    },
+    {
+      "file": "editor-320.png",
+      "pixelWidth": 320,
+      "pixelHeight": 1060,
+      "dpi": 96,
+      "sha256": "0611dbbeb9710bb43c9b6645b16b913bdae97d80cce60d5c3d6d70ca0f5ab886"
+    },
+    {
+      "file": "long-text.png",
+      "pixelWidth": 1010,
+      "pixelHeight": 1060,
+      "dpi": 96,
+      "sha256": "defb4dd45bc35c22ebcda380c23a44809404fe2e4776d1cd4fc71a4d7191db01"
+    },
+    {
+      "file": "large-list.png",
+      "pixelWidth": 1012,
+      "pixelHeight": 811,
+      "dpi": 96,
+      "sha256": "57de985d115dc159252671917248140fe14da251ed5529b091dda087887ce4ec"
+    }
+  ]
+}

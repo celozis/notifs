@@ -195,6 +195,23 @@ internal static class UiScenario
         File.Move(failurePath + ".backup", failurePath);
         await failureModel.LoadAsync();
         Assert(!failureModel.HasError && !failureModel.Selected!.IsCompleted, "failed write leaves persisted data unchanged after retry");
+
+        var largeService = new TaskService(Path.Combine(Path.GetDirectoryName(databasePath)!, "large-list.db"), clock);
+        largeService.Initialize();
+        for (var i = 1; i <= 200; i++) largeService.Create($"Задача {i}: проверить длинный прокручиваемый список", "");
+        var largeModel = new MainViewModel(largeService);
+        var largeWindow = new MainWindow(largeModel);
+        largeWindow.Show();
+        await UntilAsync(() => !largeModel.IsBusy);
+        await largeModel.LoadAsync();
+        var largeList = (ListBox)largeWindow.FindName("TaskList");
+        largeList.ScrollIntoView(largeModel.Tasks.Last());
+        await IdleAsync();
+        var listScroll = Descendants<ScrollViewer>(largeList).Single();
+        Assert(largeModel.Tasks.Count == 200 && listScroll.ScrollableHeight > 0 && listScroll.VerticalOffset > 0, "200-task list scrolls to the end inside its pane");
+        Assert(Descendants<Button>(largeWindow).Where(x => x.IsVisible).All(x => x.ActualHeight >= 44), "long-list actions retain their target height");
+        SaveImage(largeWindow, "large-list.png");
+        largeWindow.Close();
     }
 
     private static async Task ExecuteAsync(ICommand command, MainViewModel model)
@@ -235,7 +252,12 @@ internal static class UiScenario
         var scale = root.LayoutTransform.Value;
         var bitmap = new RenderTargetBitmap((int)Math.Ceiling(root.ActualWidth * scale.M11), (int)Math.Ceiling(root.ActualHeight * scale.M22), 96, 96, PixelFormats.Pbgra32);
         var visual = new DrawingVisual();
-        using (var drawing = visual.RenderOpen()) drawing.DrawRectangle(new VisualBrush(root) { Stretch = Stretch.Fill }, null, new Rect(0, 0, bitmap.PixelWidth, bitmap.PixelHeight));
+        using (var drawing = visual.RenderOpen()) drawing.DrawRectangle(new VisualBrush(root)
+        {
+            ViewboxUnits = BrushMappingMode.Absolute,
+            Viewbox = new Rect(0, 0, root.ActualWidth, root.ActualHeight),
+            Stretch = Stretch.Fill
+        }, null, new Rect(0, 0, bitmap.PixelWidth, bitmap.PixelHeight));
         bitmap.Render(visual);
         var encoder = new PngBitmapEncoder(); encoder.Frames.Add(BitmapFrame.Create(bitmap));
         var output = Path.Combine(Directory.GetCurrentDirectory(), ".artifacts", "ui-qa");
