@@ -4,12 +4,34 @@
     <StackPanel Margin="0,0,0,24"><TextBlock Text="{Binding Heading}" FontSize="29" FontWeight="SemiBold" /><TextBlock Text="Сначала главное, подробности можно добавить позже." Style="{StaticResource MutedText}" Margin="0,8,0,0" /></StackPanel>
     <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
     <Grid IsEnabled="{Binding CanEdit}" >
-      <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="*" /></Grid.RowDefinitions>
+      <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="*" /></Grid.RowDefinitions>
       <Label Content="Название *" Target="{Binding ElementName=TitleInput}" FontWeight="SemiBold" />
       <TextBox TextWrapping="Wrap" x:Name="TitleInput" Grid.Row="1" Text="{Binding Title, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="Название задачи, обязательное поле" AutomationProperties.HelpText="{Binding Error}" />
       <TextBlock Grid.Row="2" Text="{Binding Error}" Visibility="{Binding HasError, Converter={StaticResource BoolVisibility}}" Foreground="{DynamicResource Danger}" FontSize="14" Margin="0,8,0,0" AutomationProperties.LiveSetting="Assertive" />
-      <StackPanel Grid.Row="3" Margin="0,24,0,12"><Label Content="Описание" Target="{Binding ElementName=DescriptionInput}" FontWeight="SemiBold" /><TextBlock Text="Markdown: # заголовок, - список, **жирный**, *курсив*, ```код```." Style="{StaticResource MutedText}" /></StackPanel>
-      <TabControl Grid.Row="4" MinHeight="200" Background="{DynamicResource Surface}" BorderBrush="{DynamicResource Line}" Padding="12">
+      <Grid x:Name="FieldsPanel" Grid.Row="3" Margin="0,20,0,0">
+        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+        <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+        <StackPanel Margin="0,0,8,18"><Label Content="Дедлайн" Target="{Binding ElementName=DeadlineDateInput}" FontWeight="SemiBold"/><TextBox x:Name="DeadlineDateInput" Text="{Binding DeadlineDate, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="Дата дедлайна, ДД.ММ.ГГГГ, необязательно" ToolTip="ДД.ММ.ГГГГ. Пусто — без дедлайна."/><TextBlock Text="ДД.ММ.ГГГГ · необязательно" Style="{StaticResource MutedText}"/></StackPanel>
+        <StackPanel Grid.Column="1" Margin="0,0,8,18"><Label Content="Время дедлайна" Target="{Binding ElementName=DeadlineTimeInput}" FontWeight="SemiBold"/><TextBox x:Name="DeadlineTimeInput" Text="{Binding DeadlineTime, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="Время дедлайна, ЧЧ:ММ, необязательно" ToolTip="ЧЧ:ММ. Без времени — до конца дня."/><TextBlock Text="ЧЧ:ММ · без времени — до конца дня" Style="{StaticResource MutedText}"/></StackPanel>
+        <StackPanel Grid.Row="1" Margin="0,0,8,18"><TextBlock Text="Полная оценка" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,8"/>
+          <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="8"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+            <StackPanel><TextBox x:Name="EstimateHoursInput" Text="{Binding EstimateHours, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="Полная оценка, часы"/><Label Content="часы" Target="{Binding ElementName=EstimateHoursInput}" Padding="0,4,0,0"/></StackPanel>
+            <StackPanel Grid.Column="2"><TextBox x:Name="EstimateMinutesInput" Text="{Binding EstimateMinutes, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="Полная оценка, минуты"/><Label Content="минуты" Target="{Binding ElementName=EstimateMinutesInput}" Padding="0,4,0,0"/></StackPanel>
+          </Grid>
+          <TextBlock Text="Оба поля пусты — без оценки" Style="{StaticResource MutedText}"/>
+        </StackPanel>
+        <StackPanel Grid.Row="1" Grid.Column="1" Margin="0,0,8,18"><TextBlock Text="Ранг важности" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,8"/>
+          <ListBox x:Name="RankInput" ItemsSource="{Binding Ranks}" SelectedItem="{Binding Rank}" Background="Transparent" BorderThickness="0" Padding="0" ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Disabled" AutomationProperties.Name="Ранг важности, S — самый важный, D — наименее важный">
+            <ListBox.ItemsPanel><ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate></ListBox.ItemsPanel>
+            <ListBox.ItemContainerStyle><Style TargetType="ListBoxItem"><Setter Property="Width" Value="44"/><Setter Property="Height" Value="44"/><Setter Property="Padding" Value="0"/><Setter Property="Margin" Value="0"/><Setter Property="FocusVisualStyle" Value="{StaticResource FocusOutline}"/><Setter Property="AutomationProperties.Name" Value="{Binding StringFormat=Ранг {0}}"/>
+              <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ListBoxItem"><Border x:Name="Choice" BorderBrush="Transparent" BorderThickness="1" CornerRadius="8" Background="{DynamicResource Surface}"><ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/></Border><ControlTemplate.Triggers><Trigger Property="IsSelected" Value="True"><Setter TargetName="Choice" Property="BorderBrush" Value="{DynamicResource Primary}"/><Setter TargetName="Choice" Property="Background" Value="{DynamicResource Selected}"/></Trigger><Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Choice" Property="BorderBrush" Value="{DynamicResource Primary}"/></Trigger><Trigger Property="IsKeyboardFocusWithin" Value="True"><Setter TargetName="Choice" Property="BorderBrush" Value="{DynamicResource Primary}"/></Trigger></ControlTemplate.Triggers></ControlTemplate></Setter.Value></Setter>
+            </Style></ListBox.ItemContainerStyle>
+            <ListBox.ItemTemplate><DataTemplate><local:RankBadge Rank="{Binding}"/></DataTemplate></ListBox.ItemTemplate>
+          </ListBox>
+        </StackPanel>
+      </Grid>
+      <StackPanel Grid.Row="4" Margin="0,6,0,12"><Label Content="Описание" Target="{Binding ElementName=DescriptionInput}" FontWeight="SemiBold" /><TextBlock Text="Markdown: # заголовок, - список, **жирный**, *курсив*, ```код```." Style="{StaticResource MutedText}" /></StackPanel>
+      <TabControl Grid.Row="5" MinHeight="200" Background="{DynamicResource Surface}" BorderBrush="{DynamicResource Line}" Padding="12">
         <TabItem Header="  Редактор  " MinHeight="44" AutomationProperties.Name="Редактор Markdown">
           <TextBox x:Name="DescriptionInput" Text="{Binding Description, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" VerticalContentAlignment="Top" FontFamily="{StaticResource CodeFont}" FontSize="15" BorderThickness="0" Padding="8" AutomationProperties.Name="Описание в формате Markdown" />
         </TabItem>

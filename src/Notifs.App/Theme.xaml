@@ -12,6 +12,26 @@
   <SolidColorBrush x:Key="Danger" Color="#FFB5AE" />
   <SolidColorBrush x:Key="Navigation" Color="#181A17" />
   <SolidColorBrush x:Key="Hover" Color="#393C33" />
+  <SolidColorBrush x:Key="RankSBackground" Color="#6A2C35"/><SolidColorBrush x:Key="RankSText" Color="#FFD4D6"/>
+  <SolidColorBrush x:Key="RankABackground" Color="#65451F"/><SolidColorBrush x:Key="RankAText" Color="#FFDB9E"/>
+  <SolidColorBrush x:Key="RankBBackground" Color="#5D5429"/><SolidColorBrush x:Key="RankBText" Color="#F4E6AC"/>
+  <SolidColorBrush x:Key="RankCBackground" Color="#49582E"/><SolidColorBrush x:Key="RankCText" Color="#E3EDC0"/>
+  <SolidColorBrush x:Key="RankDBackground" Color="#2E533D"/><SolidColorBrush x:Key="RankDText" Color="#D0EFD9"/>
+  <Style x:Key="RankBadge" TargetType="local:RankBadge">
+    <Setter Property="Focusable" Value="False"/><Setter Property="IsTabStop" Value="False"/>
+    <Setter Property="Width" Value="26"/><Setter Property="Height" Value="26"/>
+    <Setter Property="Background" Value="{DynamicResource RankBBackground}"/><Setter Property="Foreground" Value="{DynamicResource RankBText}"/>
+    <Setter Property="AutomationProperties.Name" Value="{Binding Rank, RelativeSource={RelativeSource Self}, StringFormat=Ранг важности {0}}"/>
+    <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="local:RankBadge">
+      <Border Background="{TemplateBinding Background}" CornerRadius="6"><TextBlock Text="{Binding Rank, RelativeSource={RelativeSource TemplatedParent}}" Foreground="{TemplateBinding Foreground}" FontSize="12" FontWeight="SemiBold" HorizontalAlignment="Center" VerticalAlignment="Center" LineHeight="16"/></Border>
+    </ControlTemplate></Setter.Value></Setter>
+    <Style.Triggers>
+      <Trigger Property="Rank" Value="S"><Setter Property="Background" Value="{DynamicResource RankSBackground}"/><Setter Property="Foreground" Value="{DynamicResource RankSText}"/></Trigger>
+      <Trigger Property="Rank" Value="A"><Setter Property="Background" Value="{DynamicResource RankABackground}"/><Setter Property="Foreground" Value="{DynamicResource RankAText}"/></Trigger>
+      <Trigger Property="Rank" Value="C"><Setter Property="Background" Value="{DynamicResource RankCBackground}"/><Setter Property="Foreground" Value="{DynamicResource RankCText}"/></Trigger>
+      <Trigger Property="Rank" Value="D"><Setter Property="Background" Value="{DynamicResource RankDBackground}"/><Setter Property="Foreground" Value="{DynamicResource RankDText}"/></Trigger>
+    </Style.Triggers>
+  </Style>
   <FontFamily x:Key="BodyFont">Segoe UI</FontFamily>
   <FontFamily x:Key="CodeFont">Consolas</FontFamily>
   <BooleanToVisibilityConverter x:Key="BoolVisibility" />
@@ -134,7 +154,7 @@
     <Setter Property="FocusVisualStyle" Value="{StaticResource FocusOutline}" />
     <Setter Property="CaretBrush" Value="{DynamicResource Primary}" />
     <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="TextBox">
-      <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="8" Padding="{TemplateBinding Padding}"><ScrollViewer x:Name="PART_ContentHost"/></Border>
+      <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="8"><ScrollViewer x:Name="PART_ContentHost"/></Border>
     </ControlTemplate></Setter.Value></Setter>
     <Style.Triggers><Trigger Property="IsKeyboardFocusWithin" Value="True">
       <Setter Property="BorderBrush" Value="{DynamicResource Primary}" />
