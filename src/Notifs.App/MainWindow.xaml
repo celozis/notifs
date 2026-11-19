@@ -1,97 +1,69 @@
 <Window x:Class="Notifs.App.MainWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:local="clr-namespace:Notifs.App"
-        Title="Notifs — задачи" Width="1240" Height="800" MinWidth="760" MinHeight="560" WindowStartupLocation="CenterScreen" Language="ru-RU" Style="{StaticResource {x:Type Window}}">
+        Title="Notifs — задачи" Width="1028" Height="850" MinWidth="320" MinHeight="420" WindowStartupLocation="CenterScreen" Language="ru-RU" Style="{StaticResource {x:Type Window}}">
   <Grid x:Name="Shell" Background="{DynamicResource Background}">
-    <Grid.ColumnDefinitions><ColumnDefinition x:Name="NavColumn" Width="220" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
-    <Grid.RowDefinitions><RowDefinition x:Name="NavRow" Height="0" /><RowDefinition Height="*" /></Grid.RowDefinitions>
-    <Border x:Name="Navigation" Grid.RowSpan="2" Background="{DynamicResource Surface}" BorderBrush="{DynamicResource Line}" BorderThickness="0,0,1,0" Padding="24,32">
+    <Grid.ColumnDefinitions><ColumnDefinition x:Name="NavColumn" Width="178"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+    <Border x:Name="Navigation" Background="{DynamicResource Navigation}" BorderBrush="{DynamicResource Line}" BorderThickness="0,0,1,0" Padding="12,30,12,16">
       <DockPanel>
-        <StackPanel x:Name="Brand" DockPanel.Dock="Top" Margin="0,0,0,48">
-          <StackPanel Orientation="Horizontal">
-            <Border Background="{DynamicResource Primary}" CornerRadius="10" Width="36" Height="36" Margin="0,0,10,0">
-              <Path Data="M 4,12 L 10,18 L 21,5" Stroke="{DynamicResource OnPrimary}" StrokeThickness="2.4" Width="24" Height="24" Stretch="Uniform" Margin="9" Focusable="False" />
-            </Border>
-            <TextBlock Text="notifs" FontSize="26" FontWeight="Bold" VerticalAlignment="Center" />
-          </StackPanel>
-          <TextBlock Text="Меньше держать в голове" Style="{StaticResource MutedText}" Margin="0,12,0,0" />
+        <StackPanel x:Name="Brand" DockPanel.Dock="Top" Margin="8,0,0,28">
+          <StackPanel Orientation="Horizontal"><Border Background="{DynamicResource Primary}" CornerRadius="10" Width="30" Height="34"><Path Data="M 2,8 L 7,13 L 16,2" Stroke="{DynamicResource OnPrimary}" StrokeThickness="1.7" Stretch="Uniform" Margin="8"/></Border><TextBlock x:Name="BrandName" Text="notifs" FontSize="26" FontWeight="Bold" Margin="10,0,0,0"/></StackPanel>
+          <TextBlock x:Name="BrandTagline" Text="Твои дела. Твой ритм." FontSize="12" Foreground="{DynamicResource MutedInk}" Margin="0,10,0,0"/>
         </StackPanel>
-        <StackPanel x:Name="LocalNote" DockPanel.Dock="Bottom">
-          <Border Background="{DynamicResource Background}" CornerRadius="10" Padding="14">
-            <StackPanel><TextBlock Text="Ваше личное пространство" FontSize="14" FontWeight="SemiBold" /><TextBlock Text="Задачи остаются на этом компьютере и доступны без интернета." Style="{StaticResource MutedText}" Margin="0,8,0,0" /></StackPanel>
-          </Border>
+        <StackPanel DockPanel.Dock="Bottom">
+          <StackPanel x:Name="BottomNavigation"/>
+          <Border x:Name="LocalNote" BorderBrush="{DynamicResource Line}" BorderThickness="0,1,0,0" Padding="8,18,4,0" Margin="0,16,0,0"><StackPanel><TextBlock Text="Моё пространство" FontSize="13"/><TextBlock Text="На этом компьютере" Style="{StaticResource MutedText}"/></StackPanel></Border>
         </StackPanel>
-        <StackPanel x:Name="NavItems">
-          <Button Command="{Binding ActiveCommand}" Margin="0,0,0,8" AutomationProperties.Name="Мои задачи" AutomationProperties.ItemStatus="{Binding ActiveNavigationStatus}">
-            <Button.Style><Style TargetType="Button" BasedOn="{StaticResource NavigationButton}"><Style.Triggers><DataTrigger Binding="{Binding IsActive}" Value="True"><Setter Property="Background" Value="{DynamicResource Selected}" /><Setter Property="FontWeight" Value="SemiBold" /></DataTrigger></Style.Triggers></Style></Button.Style>
-            <StackPanel Orientation="Horizontal"><Path Data="M 2,4 L 5,7 L 10,1 M 14,4 L 25,4 M 2,16 L 5,19 L 10,13 M 14,16 L 25,16" Stroke="{DynamicResource Primary}" StrokeThickness="1.7" Width="24" Height="20" Stretch="Uniform" Margin="0,0,12,0" /><TextBlock Text="Мои задачи" /></StackPanel>
-          </Button>
-          <Button Command="{Binding HistoryCommand}" AutomationProperties.Name="История выполненных задач" AutomationProperties.ItemStatus="{Binding HistoryNavigationStatus}">
-            <Button.Style><Style TargetType="Button" BasedOn="{StaticResource NavigationButton}"><Style.Triggers><DataTrigger Binding="{Binding IsHistory}" Value="True"><Setter Property="Background" Value="{DynamicResource Selected}" /><Setter Property="FontWeight" Value="SemiBold" /></DataTrigger></Style.Triggers></Style></Button.Style>
-            <StackPanel Orientation="Horizontal"><Path Data="M 12,2 A 10,10 0 1 1 2,12 M 2,2 L 2,10 L 10,10 M 12,6 L 12,12 L 17,15" Stroke="{DynamicResource Primary}" StrokeThickness="1.7" Width="24" Height="22" Stretch="Uniform" Margin="0,0,12,0" /><TextBlock Text="История" /></StackPanel>
-          </Button>
-        </StackPanel>
+        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"><StackPanel x:Name="NavItems"/></ScrollViewer>
       </DockPanel>
     </Border>
-    <Grid x:Name="Workspace" Grid.Column="1" Grid.Row="1" Margin="32,32,32,16">
-      <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="*" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
-      <Grid Margin="0,0,0,24"><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-        <StackPanel Margin="0,0,16,0"><TextBlock Text="{Binding PageTitle}" FontSize="32" FontWeight="SemiBold" /><TextBlock Text="{Binding Subtitle}" Style="{StaticResource MutedText}" Margin="0,8,0,0" /></StackPanel>
-        <Button x:Name="NewButton" Grid.Column="1" Command="{Binding NewCommand, RelativeSource={RelativeSource AncestorType=Window}}" Style="{StaticResource PrimaryButton}" VerticalAlignment="Top" ToolTip="Новая задача (Ctrl+N)" AutomationProperties.Name="Новая задача">
-          <StackPanel Orientation="Horizontal"><Path Data="M 8,0 L 8,16 M 0,8 L 16,8" Stroke="{DynamicResource OnPrimary}" StrokeThickness="1.7" Width="16" Height="16" Margin="0,0,10,0" /><TextBlock Text="Новая задача" /></StackPanel>
-        </Button>
-      </Grid>
-      <Border Grid.Row="1" Visibility="{Binding HasError, Converter={StaticResource BoolVisibility}}" BorderBrush="{DynamicResource Danger}" BorderThickness="1" Padding="12" Margin="0,0,0,16" CornerRadius="8">
-        <DockPanel><Button Content="Повторить" Command="{Binding RefreshCommand}" DockPanel.Dock="Right" Margin="16,0,0,0" /><TextBlock Text="{Binding Error}" Foreground="{DynamicResource Danger}" AutomationProperties.LiveSetting="Assertive" VerticalAlignment="Center" /></DockPanel>
-      </Border>
-      <Grid x:Name="ContentGrid" Grid.Row="2">
-        <Grid.ColumnDefinitions><ColumnDefinition x:Name="ListColumn" Width="0.95*" /><ColumnDefinition x:Name="DetailColumn" Width="1.05*" /></Grid.ColumnDefinitions>
-        <Grid.RowDefinitions><RowDefinition x:Name="ListRow" Height="*" /><RowDefinition x:Name="DetailRow" Height="0" /></Grid.RowDefinitions>
-        <Grid x:Name="ListPane" Margin="0,0,24,0">
-          <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="*" /></Grid.RowDefinitions>
-          <TextBlock Text="{Binding CountLabel}" FontWeight="SemiBold" FontSize="14" Foreground="{DynamicResource MutedInk}" Margin="0,0,0,16" />
-          <ListBox x:Name="TaskList" Grid.Row="1" ItemsSource="{Binding Tasks}" SelectedItem="{Binding Selected}" BorderThickness="0" Background="Transparent" Padding="0,0,4,0"
-                   ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.CanContentScroll="True" VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling" AutomationProperties.Name="Список задач">
-            <ListBox.ItemTemplate><DataTemplate><StackPanel>
-              <TextBlock Text="{Binding Title}" FontSize="17" FontWeight="SemiBold" />
-              <TextBlock Text="{Binding CreatedLabel}" Style="{StaticResource MutedText}" Margin="0,12,0,0" />
-            </StackPanel></DataTemplate></ListBox.ItemTemplate>
-          </ListBox>
-          <StackPanel Grid.Row="1" Visibility="{Binding IsEmpty, Converter={StaticResource BoolVisibility}}" VerticalAlignment="Center" Margin="16,24">
-            <Path Data="M 3,2 L 27,2 L 27,30 L 3,30 Z M 9,10 L 21,10 M 9,16 L 21,16 M 9,22 L 16,22" Stroke="{DynamicResource Primary}" StrokeThickness="1.7" Width="40" Height="44" Stretch="Uniform" HorizontalAlignment="Left" Margin="0,0,0,24" />
-            <TextBlock Text="{Binding EmptyTitle}" FontSize="22" FontWeight="SemiBold" />
-            <TextBlock Text="{Binding EmptyMessage}" Style="{StaticResource MutedText}" Margin="0,12,0,24" />
-            <Button Content="Добавить задачу" Command="{Binding NewCommand, RelativeSource={RelativeSource AncestorType=Window}}" HorizontalAlignment="Left" />
-          </StackPanel>
-        </Grid>
-        <Border x:Name="DetailPane" Grid.Column="1" Background="{DynamicResource Surface}" BorderBrush="{DynamicResource Line}" BorderThickness="1" CornerRadius="12" Padding="24">
-          <Grid>
-            <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="*" /></Grid.RowDefinitions>
-            <Button x:Name="BackToList" Content="К списку задач" Command="{Binding BackToListCommand, RelativeSource={RelativeSource AncestorType=Window}}" HorizontalAlignment="Left" Visibility="Collapsed" Margin="0,0,0,16" />
-            <TextBlock Grid.Row="1" Text="Выберите задачу, чтобы увидеть подробности" Style="{StaticResource MutedText}" HorizontalAlignment="Center" VerticalAlignment="Center" TextAlignment="Center" Margin="24" />
-            <Grid Grid.Row="1" Background="{DynamicResource Surface}" Visibility="{Binding HasSelection, Converter={StaticResource BoolVisibility}}">
-              <Grid.RowDefinitions><RowDefinition Height="*" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
-              <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-                <StackPanel>
-                  <Border Background="{DynamicResource Selected}" CornerRadius="4" Padding="8,4" HorizontalAlignment="Left" Margin="0,0,0,16"><TextBlock Text="{Binding Selected.CompletedLabel}" Foreground="{DynamicResource Primary}" FontSize="12" FontWeight="SemiBold" /></Border>
-                  <TextBlock Text="{Binding Selected.Title}" FontSize="26" FontWeight="SemiBold" Margin="0,0,0,12" />
-                  <TextBlock Text="{Binding Selected.CreatedLabel}" Style="{StaticResource MutedText}" Margin="0,0,0,24" />
-                  <Border BorderBrush="{DynamicResource Line}" BorderThickness="0,1,0,0" Padding="0,20,0,0">
-                    <StackPanel><TextBlock Text="ОПИСАНИЕ" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource MutedInk}" Margin="0,0,0,8" />
-                      <local:MarkdownView Source="{Binding Selected.Description}" VerticalScrollBarVisibility="Disabled" IsTabStop="True" AutomationProperties.Name="Форматированное описание задачи" />
-                      <TextBlock Text="Добавьте детали через «Редактировать»."><TextBlock.Style><Style TargetType="TextBlock" BasedOn="{StaticResource MutedText}"><Setter Property="Visibility" Value="Collapsed" /><Style.Triggers><DataTrigger Binding="{Binding Selected.Description}" Value=""><Setter Property="Visibility" Value="Visible" /></DataTrigger></Style.Triggers></Style></TextBlock.Style></TextBlock>
-                    </StackPanel>
-                  </Border>
+    <Grid x:Name="Workspace" Grid.Column="1" Margin="25,30,25,16">
+      <Grid.RowDefinitions><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+      <Grid x:Name="BrowseView">
+        <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+        <StackPanel Margin="0,0,0,26"><TextBlock Text="{Binding PageTitle}" FontSize="29" FontWeight="SemiBold"/><TextBlock Text="{Binding Subtitle}" FontSize="13" Foreground="{DynamicResource MutedInk}" Margin="0,8,0,0"/></StackPanel>
+        <Border Grid.Row="1" Visibility="{Binding HasError, Converter={StaticResource BoolVisibility}}" BorderBrush="{DynamicResource Danger}" BorderThickness="1" Padding="10" Margin="0,0,0,12" CornerRadius="8"><StackPanel><TextBlock Text="{Binding Error}" Foreground="{DynamicResource Danger}" AutomationProperties.LiveSetting="Assertive"/><Button Content="Повторить" Command="{Binding RefreshCommand}" HorizontalAlignment="Left" Margin="0,8,0,0"/></StackPanel></Border>
+        <Grid x:Name="ContentGrid" Grid.Row="2">
+          <Grid.ColumnDefinitions><ColumnDefinition x:Name="ListColumn" Width="*"/><ColumnDefinition x:Name="GapColumn" Width="20"/><ColumnDefinition x:Name="DetailColumn" Width="*"/></Grid.ColumnDefinitions>
+          <Grid x:Name="ListPane">
+            <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+            <TextBlock Text="{Binding CountLabel}" FontSize="11" Foreground="{DynamicResource MutedInk}" Margin="0,0,0,12"/>
+            <ListBox x:Name="TaskList" Grid.Row="1" ItemsSource="{Binding Tasks}" SelectedItem="{Binding Selected}" BorderThickness="0" Background="Transparent" Padding="0,0,2,0" HorizontalContentAlignment="Stretch" ScrollViewer.HorizontalScrollBarVisibility="Disabled" VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling" AutomationProperties.Name="Список задач">
+              <ListBox.ItemTemplate><DataTemplate><Grid MinHeight="76">
+                <Grid.ColumnDefinitions><ColumnDefinition Width="44"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                <Button Style="{StaticResource CompletionButton}" Content="{Binding CheckLabel}" Command="{Binding DataContext.ToggleCommand, RelativeSource={RelativeSource AncestorType=ListBox}}" CommandParameter="{Binding}" AutomationProperties.Name="{Binding ToggleLabel}" PreviewMouseDown="CompletionMouseDown" VerticalAlignment="Top" Padding="0" Background="Transparent" BorderThickness="0" FontSize="20"/>
+                <StackPanel Grid.Column="1" Margin="0,10,0,6">
+                  <TextBlock Text="{Binding Title}" FontSize="15" FontWeight="SemiBold"><TextBlock.Style><Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}"><Style.Triggers><DataTrigger Binding="{Binding IsCompleted}" Value="True"><Setter Property="TextDecorations" Value="Strikethrough"/><Setter Property="Foreground" Value="{DynamicResource MutedInk}"/></DataTrigger></Style.Triggers></Style></TextBlock.Style></TextBlock>
+                  <TextBlock Text="{Binding AgeLabel}" FontSize="11" Foreground="{DynamicResource MutedInk}" Margin="0,8,0,0"/>
+                  <TextBlock Text="Выполнена" FontSize="11" Foreground="{DynamicResource Primary}" Visibility="{Binding IsCompleted, Converter={StaticResource BoolVisibility}}"/>
                 </StackPanel>
-              </ScrollViewer>
-              <WrapPanel Grid.Row="1" Margin="0,24,0,0">
-                <Button Content="Готово" Command="{Binding CompleteCommand}" Style="{StaticResource PrimaryButton}" Margin="0,0,8,8" Visibility="{Binding IsActive, Converter={StaticResource BoolVisibility}}" />
-                <Button Content="Вернуть в работу" Command="{Binding RestoreCommand}" Style="{StaticResource PrimaryButton}" Margin="0,0,8,8" Visibility="{Binding IsHistory, Converter={StaticResource BoolVisibility}}" />
-                <Button Content="Редактировать" Command="{Binding EditCommand, RelativeSource={RelativeSource AncestorType=Window}}" Margin="0,0,0,8" />
-              </WrapPanel>
-            </Grid>
+              </Grid></DataTemplate></ListBox.ItemTemplate>
+            </ListBox>
+            <StackPanel Grid.Row="1" Visibility="{Binding IsEmpty, Converter={StaticResource BoolVisibility}}" VerticalAlignment="Center" Margin="12"><TextBlock Text="{Binding EmptyTitle}" FontSize="22" FontWeight="SemiBold"/><TextBlock Text="{Binding EmptyMessage}" Style="{StaticResource MutedText}" Margin="0,12,0,20"/><Button Content="Новая задача" Command="{Binding NewCommand, RelativeSource={RelativeSource AncestorType=Window}}" HorizontalAlignment="Left"/></StackPanel>
+            <Border x:Name="FilterBar" Grid.Row="2" CornerRadius="8" BorderBrush="{DynamicResource Line}" BorderThickness="1" Padding="4" Margin="0,14,0,0">
+              <UniformGrid Columns="3"><Button Content="{Binding AllLabel}" Command="{Binding AllCommand}" Padding="1" FontSize="11"><Button.Style><Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}"><Setter Property="Background" Value="Transparent"/><Setter Property="BorderThickness" Value="0"/><Style.Triggers><DataTrigger Binding="{Binding IsAll}" Value="True"><Setter Property="Background" Value="{DynamicResource Primary}"/><Setter Property="Foreground" Value="{DynamicResource OnPrimary}"/></DataTrigger></Style.Triggers></Style></Button.Style></Button><Button Content="{Binding IncompleteLabel}" Command="{Binding IncompleteCommand}" Padding="1" FontSize="11"><Button.Style><Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}"><Setter Property="Background" Value="Transparent"/><Setter Property="BorderThickness" Value="0"/><Style.Triggers><DataTrigger Binding="{Binding IsIncomplete}" Value="True"><Setter Property="Background" Value="{DynamicResource Primary}"/><Setter Property="Foreground" Value="{DynamicResource OnPrimary}"/></DataTrigger></Style.Triggers></Style></Button.Style></Button><Button Content="{Binding CompletedLabel}" Command="{Binding CompletedCommand}" Padding="1" FontSize="11"><Button.Style><Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}"><Setter Property="Background" Value="Transparent"/><Setter Property="BorderThickness" Value="0"/><Style.Triggers><DataTrigger Binding="{Binding IsCompleted}" Value="True"><Setter Property="Background" Value="{DynamicResource Primary}"/><Setter Property="Foreground" Value="{DynamicResource OnPrimary}"/></DataTrigger></Style.Triggers></Style></Button.Style></Button></UniformGrid>
+            </Border>
           </Grid>
-        </Border>
+          <Border x:Name="DetailPane" Grid.Column="2" Background="{DynamicResource Surface}" BorderBrush="{DynamicResource Line}" BorderThickness="1" CornerRadius="12" Padding="22" VerticalAlignment="Stretch">
+            <Grid><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+              <Button x:Name="BackToList" Content="К списку задач" Command="{Binding BackToListCommand, RelativeSource={RelativeSource AncestorType=Window}}" HorizontalAlignment="Left" Margin="0,0,0,16"/>
+              <TextBlock Grid.Row="1" Text="Выберите задачу в списке или создайте новую." Style="{StaticResource MutedText}" VerticalAlignment="Center"/>
+              <Grid Grid.Row="1" Background="{DynamicResource Surface}" Visibility="{Binding HasSelection, Converter={StaticResource BoolVisibility}}">
+                <Grid.RowDefinitions><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"><StackPanel>
+                  <TextBlock Text="ПОДРОБНОСТИ ЗАДАЧИ" FontSize="11" Foreground="{DynamicResource MutedInk}" Margin="0,0,0,18"/>
+                  <TextBlock Text="{Binding Selected.Title}" FontSize="22" FontWeight="SemiBold"/>
+                  <TextBlock Text="{Binding Selected.AgeLabel}" Style="{StaticResource MutedText}" Margin="0,12,0,8"/>
+                  <TextBlock Text="{Binding Selected.CreatedLabel}" Style="{StaticResource MutedText}"/>
+                  <TextBlock Text="{Binding Selected.StateLabel}" Foreground="{DynamicResource Primary}" FontSize="12" Margin="0,10,0,18"/>
+                  <Border BorderBrush="{DynamicResource Line}" BorderThickness="0,1,0,0" Padding="0,16,0,0"><StackPanel><local:MarkdownView Source="{Binding Selected.Description}" VerticalScrollBarVisibility="Disabled" AutomationProperties.Name="Форматированное описание задачи"/><TextBlock Text="Добавьте подробности через «Изменить»."><TextBlock.Style><Style TargetType="TextBlock" BasedOn="{StaticResource MutedText}"><Setter Property="Visibility" Value="Collapsed"/><Style.Triggers><DataTrigger Binding="{Binding Selected.Description}" Value=""><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers></Style></TextBlock.Style></TextBlock></StackPanel></Border>
+                </StackPanel></ScrollViewer>
+                <WrapPanel Grid.Row="1" Margin="0,20,0,0"><Button Content="Готово" Command="{Binding CompleteCommand}" Visibility="{Binding Selected.IsIncomplete, Converter={StaticResource BoolVisibility}}" Style="{StaticResource PrimaryButton}" Margin="0,0,8,8"/><Button Content="В работу" Command="{Binding RestoreCommand}" Visibility="{Binding Selected.IsCompleted, Converter={StaticResource BoolVisibility}}" Style="{StaticResource PrimaryButton}" Margin="0,0,8,8"/><Button Content="Изменить" Command="{Binding EditCommand, RelativeSource={RelativeSource AncestorType=Window}}" Margin="0,0,0,8"/></WrapPanel>
+              </Grid>
+            </Grid>
+          </Border>
+        </Grid>
       </Grid>
-      <TextBlock Grid.Row="3" Text="{Binding Status}" Style="{StaticResource MutedText}" Margin="0,16,0,0" AutomationProperties.LiveSetting="Polite" />
+      <ContentControl x:Name="EditorHost" Visibility="Collapsed" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"/>
+      <TextBlock x:Name="StatusNote" Grid.Row="1" Text="{Binding Status}" Style="{StaticResource MutedText}" Margin="0,20,0,0" AutomationProperties.LiveSetting="Polite"/>
     </Grid>
   </Grid>
 </Window>

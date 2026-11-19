@@ -29,17 +29,22 @@ public sealed class TaskService(string databasePath, TimeProvider? clock = null)
         command.ExecuteNonQuery();
     }
 
-    public IReadOnlyList<TaskItem> List(bool completed = false)
+    public IReadOnlyList<TaskItem> List(bool completed = false) => ReadTasks(completed);
+
+    public IReadOnlyList<TaskItem> ListAll() => ReadTasks(null);
+
+    private IReadOnlyList<TaskItem> ReadTasks(bool? completed)
     {
         using var connection = Open();
         using var command = connection.CreateCommand();
-        command.CommandText = completed
+        command.CommandText = completed is null
+            ? "SELECT id,title,description,created_at,completed_at FROM tasks ORDER BY completed_at IS NOT NULL, CASE WHEN completed_at IS NULL THEN created_at END, completed_at DESC,id"
+            : completed.Value
             ? "SELECT id,title,description,created_at,completed_at FROM tasks WHERE completed_at IS NOT NULL ORDER BY completed_at DESC,id"
             : "SELECT id,title,description,created_at,completed_at FROM tasks WHERE completed_at IS NULL ORDER BY created_at,id";
         using var reader = command.ExecuteReader();
         var result = new List<TaskItem>();
-        while (reader.Read()) result.Add(new(Guid.Parse(reader.GetString(0)), reader.GetString(1), reader.GetString(2),
-            ParseTime(reader.GetString(3)), reader.IsDBNull(4) ? null : ParseTime(reader.GetString(4))));
+        while (reader.Read()) result.Add(ReadItem(reader));
         return result;
     }
 
@@ -67,20 +72,24 @@ public sealed class TaskService(string databasePath, TimeProvider? clock = null)
         });
     }
 
-    public void Complete(Guid id) => Update(id,
+    public TaskItem Complete(Guid id) => Update(id,
         "UPDATE tasks SET completed_at=COALESCE(completed_at,$completed) WHERE id=$id",
         command => command.Parameters.AddWithValue("$completed", FormatTime(time.GetUtcNow())));
 
-    public void Restore(Guid id) => Update(id, "UPDATE tasks SET completed_at=NULL WHERE id=$id", _ => { });
+    public TaskItem Restore(Guid id) => Update(id, "UPDATE tasks SET completed_at=NULL WHERE id=$id", _ => { });
 
-    private void Update(Guid id, string sql, Action<SqliteCommand> bind)
+    private TaskItem Update(Guid id, string sql, Action<SqliteCommand> bind)
     {
         using var connection = Open();
         using var command = connection.CreateCommand();
-        command.CommandText = sql;
+        command.CommandText = sql + " RETURNING id,title,description,created_at,completed_at";
         command.Parameters.AddWithValue("$id", id.ToString());
         bind(command);
-        if (command.ExecuteNonQuery() != 1) throw new KeyNotFoundException("Задача больше не существует. Обновите список.");
+        using var reader = command.ExecuteReader();
+        if (!reader.Read()) throw new KeyNotFoundException("Задача больше не существует. Обновите список.");
+        var item = ReadItem(reader);
+        reader.Read(); // Finish the statement before reporting a successful write.
+        return item;
     }
 
     private SqliteConnection Open()
@@ -94,4 +103,6 @@ public sealed class TaskService(string databasePath, TimeProvider? clock = null)
         ? title.Trim() : throw new ArgumentException("Введите название задачи. Описание останется на месте.", nameof(title));
     private static string FormatTime(DateTimeOffset value) => value.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture);
     private static DateTimeOffset ParseTime(string value) => DateTimeOffset.Parse(value, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
+    private static TaskItem ReadItem(SqliteDataReader reader) => new(Guid.Parse(reader.GetString(0)), reader.GetString(1), reader.GetString(2),
+        ParseTime(reader.GetString(3)), reader.IsDBNull(4) ? null : ParseTime(reader.GetString(4)));
 }

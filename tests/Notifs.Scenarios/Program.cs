@@ -51,6 +51,16 @@ internal static class Program
             var later = reopened.Create("Следующее дело", "");
             Check(reopened.List().Select(x => x.Id).SequenceEqual(new[] { task.Id, later.Id }), "active tasks ordered oldest first");
 
+            clock.Advance(TimeSpan.FromMinutes(1));
+            reopened.Complete(later.Id);
+            clock.Advance(TimeSpan.FromMinutes(1));
+            reopened.Complete(task.Id);
+            Check(reopened.ListAll().Select(x => x.Id).SequenceEqual(new[] { task.Id, later.Id }), "all tasks sort completed by recent completion");
+            reopened.Restore(later.Id);
+            Check(reopened.ListAll().Select(x => x.Id).SequenceEqual(new[] { later.Id, task.Id }), "all tasks keep incomplete above completed");
+            reopened.Initialize();
+            Check(reopened.ListAll().Count == 2 && reopened.ListAll().Single(x => x.Id == task.Id).CreatedAt == task.CreatedAt, "schema initialization preserves previous identities and data");
+
             var app = new Application();
             app.Resources.MergedDictionaries.Add(new ResourceDictionary { Source = new Uri("/Notifs.App;component/Theme.xaml", UriKind.Relative) });
             var view = new MarkdownView { Source = markdown };
@@ -64,8 +74,8 @@ internal static class Program
             Check(text.Contains("var x = 1;") && text.Contains("[изображение]") && text.Contains("not executable"), "code retained; remote image and raw HTML stay inert text");
             var editor = new EditorViewModel(reopened, null) { Description = markdown };
             editor.SaveCommand.Execute(null); // Invalid title is synchronous, no dispatcher pump needed.
-            Check(editor.HasError && editor.Description == markdown && reopened.List().Count == 2, "invalid UI submission retains Markdown and creates nothing");
-            Console.WriteLine("All 17 application and rendering checks passed.");
+            Check(editor.HasError && editor.Description == markdown && reopened.ListAll().Count == 2, "invalid UI submission retains Markdown and creates nothing");
+            Console.WriteLine("All application and rendering checks passed.");
             return UiScenario.Run(app, Path.Combine(directory, "ui.db"));
         }
         catch (Exception ex) { Console.Error.WriteLine(ex); return 1; }

@@ -2,6 +2,21 @@ using System.Windows.Input;
 
 namespace Notifs.App;
 
+public sealed class ParameterAsyncCommand(Func<object?, Task> execute, Func<bool> canExecute) : ICommand
+{
+    private bool running;
+    public bool CanExecute(object? parameter) => !running && canExecute();
+    public async void Execute(object? parameter)
+    {
+        if (!CanExecute(parameter)) return;
+        running = true;
+        CommandManager.InvalidateRequerySuggested();
+        try { await execute(parameter); }
+        finally { running = false; CommandManager.InvalidateRequerySuggested(); }
+    }
+    public event EventHandler? CanExecuteChanged { add => CommandManager.RequerySuggested += value; remove => CommandManager.RequerySuggested -= value; }
+}
+
 public sealed class RelayCommand(Action execute, Func<bool>? canExecute = null) : ICommand
 {
     public bool CanExecute(object? parameter) => canExecute?.Invoke() ?? true;
