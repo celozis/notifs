@@ -62,7 +62,11 @@ public partial class MainWindow : Window
         InputBindings.Add(new KeyBinding(NewCommand, Key.N, ModifierKeys.Control));
         InputBindings.Add(new KeyBinding(new RelayCommand(() => editor?.SaveCommand.Execute(null), () => CanNavigate() && editor?.SaveCommand.CanExecute(null) == true), Key.S, ModifierKeys.Control));
         InputBindings.Add(new KeyBinding(new RelayCommand(() => { if (DeleteOverlay.IsVisible) CancelDeleteCommand.Execute(null); else if (RemindersHost.IsVisible && reminders?.CancelCommand.CanExecute(null) == true) reminders.CancelCommand.Execute(null); else if (CancelEditorCommand.CanExecute(null)) CancelEditorCommand.Execute(null); }), Key.Escape, ModifierKeys.None));
-        model.DeletedRestored += async key => { if (key.Type == "signal") await OpenRemindersAsync(); else CloseEditor(); };
+        model.DeletedRestored += async key =>
+        {
+            if (key.Type == "signal") await OpenRemindersAsync();
+            else if (RemindersHost.IsVisible) CloseEditor();
+        };
         Loaded += async (_, _) => await model.LoadAsync();
         timeRefresh.Tick += (_, _) => { if (!model.IsBusy) model.RefreshTime(); };
         Loaded += (_, _) => timeRefresh.Start();

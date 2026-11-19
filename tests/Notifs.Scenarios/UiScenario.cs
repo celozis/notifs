@@ -248,7 +248,10 @@ internal static partial class UiScenario
     }
     internal static void SaveImage(Window window, string name)
     {
+        void Trace(string step) { if (Environment.GetEnvironmentVariable("NOTIFS_QA_TRACE") == "1") Console.WriteLine($"SNAPSHOT {name}: {step}"); }
+        Trace("layout");
         window.UpdateLayout();
+        Trace("drawing");
         var root = (FrameworkElement)window.Content;
         var scale = root.LayoutTransform.Value;
         var bitmap = new RenderTargetBitmap((int)Math.Ceiling(root.ActualWidth * scale.M11), (int)Math.Ceiling(root.ActualHeight * scale.M22), 96, 96, PixelFormats.Pbgra32);
@@ -259,11 +262,14 @@ internal static partial class UiScenario
             Viewbox = new Rect(0, 0, root.ActualWidth, root.ActualHeight),
             Stretch = Stretch.Fill
         }, null, new Rect(0, 0, bitmap.PixelWidth, bitmap.PixelHeight));
+        Trace("render");
         bitmap.Render(visual);
+        Trace("encode");
         var encoder = new PngBitmapEncoder(); encoder.Frames.Add(BitmapFrame.Create(bitmap));
         var output = Path.Combine(Directory.GetCurrentDirectory(), ".artifacts", "ui-qa");
         Directory.CreateDirectory(output);
         using var stream = File.Create(Path.Combine(output, name)); encoder.Save(stream);
+        Trace("done");
     }
     private static void Assert(bool condition, string message) { if (!condition) throw new Exception(message); Console.WriteLine("PASS " + message); }
     private sealed class BindingErrorListener(System.Text.StringBuilder errors) : System.Diagnostics.TraceListener

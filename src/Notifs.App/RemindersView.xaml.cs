@@ -33,12 +33,13 @@ public partial class RemindersView : UserControl
         model.PropertyChanged += (_, args) =>
         {
             if (args.PropertyName == nameof(model.IsEditing) && !model.IsEditing)
-                Dispatcher.InvokeAsync(() => NewReminder.Focus(), DispatcherPriority.Input);
+                Dispatcher.InvokeAsync(() => NewReminder.Focus(), DispatcherPriority.ContextIdle);
         };
     }
     private void FocusEditor() => Dispatcher.InvokeAsync(() => { EditorScroll.ScrollToTop(); TitleInput.Focus(); }, DispatcherPriority.Input);
-    private void FocusList() => Dispatcher.InvokeAsync(() => NewReminder.Focus(), DispatcherPriority.Input);
-    private void FocusToggle(Guid id) => Dispatcher.InvokeAsync(() => FindToggle(this, id)?.Focus(), DispatcherPriority.Input);
+    private void FocusList() => Dispatcher.InvokeAsync(() => NewReminder.Focus(), DispatcherPriority.ContextIdle);
+    // CommandManager reenables busy commands at Background priority before focus can return.
+    private void FocusToggle(Guid id) => Dispatcher.InvokeAsync(() => FindToggle(this, id)?.Focus(), DispatcherPriority.ContextIdle);
     private static Button? FindToggle(DependencyObject parent, Guid id)
     {
         for (var i = 0; i < System.Windows.Media.VisualTreeHelper.GetChildrenCount(parent); i++)

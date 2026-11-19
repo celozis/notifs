@@ -99,6 +99,11 @@ internal static partial class UiScenario
         Assert(reminders.IsBusy && !main.RestoreDeletedCommand.CanExecute(null), "shared restoration is blocked while a signal form is saving");
         await UntilAsync(() => !reminders.IsBusy);
         Assert(reminders.IsEditing && reminders.Description.Contains("ошибку") && reminders.Message.Contains("Не удалось сохранить") && service.ListSignals().Single().Description.Contains("перерыв"), "SQLite write failure retains signal form and previous committed description");
+        await SizeAsync(main, 320, 930);
+        var errorMessage = Descendants<TextBlock>(view).Single(x => x.Text == reminders.Message);
+        Assert(errorMessage.ActualHeight > 48 && errorMessage.ActualWidth <= view.ActualWidth + 1, "storage error stays readable on multiple lines within a narrow form");
+        SaveImage(main, "issue-5-editor-error-320.png");
+        await SizeAsync(main, 1010, 930);
         using (var connection = new SqliteConnection($"Data Source={databasePath}"))
         {
             connection.Open(); using var command = connection.CreateCommand(); command.CommandText = "DROP TRIGGER fail_signal_save"; command.ExecuteNonQuery();
@@ -121,7 +126,8 @@ internal static partial class UiScenario
         await UntilAsync(() => !reminders.IsBusy && !model.IsBusy && output.VisibleEvents.Count == 0);
         Assert(!service.ListSignals().Single().Enabled, "disable saves the schedule and removes its native card");
         var toggleButton = Descendants<Button>(view).Single(x => Equals(x.Content, "Включить"));
-        toggleButton.Focus();
+        main.Activate(); toggleButton.Focus();
+        Assert(ReferenceEquals(Keyboard.FocusedElement, toggleButton), "toggle scenario starts with the real button focused");
         reminders.ToggleCommand.Execute(reminders.Signals.Single());
         await UntilAsync(() => !reminders.IsBusy && !model.IsBusy);
         await IdleAsync();
