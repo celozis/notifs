@@ -65,10 +65,10 @@ public sealed class NativeNotificationOutput : INotificationOutput, IDisposable
         var dpi = VisualTreeHelper.GetDpi(Window).DpiScaleX;
         Window.Width = Math.Max(1, Math.Min(365, (work.Right - work.Left) / dpi - 44));
         var height = Math.Max(1, (work.Bottom - work.Top) / dpi - 44);
-        var hideAll = new Button { Content = "Скрыть все", HorizontalAlignment = HorizontalAlignment.Right, FontSize = 11, MinHeight = 38, Padding = new Thickness(12, 4, 12, 4), Margin = new Thickness(0, 0, 0, 10) };
+        var hideAll = new Button { Content = "Скрыть все", HorizontalAlignment = HorizontalAlignment.Right, FontSize = 11, MinHeight = 44, Padding = new Thickness(12, 4, 12, 4), Margin = new Thickness(0, 0, 0, 10) };
         hideAll.Click += (_, _) => HideAllRequested?.Invoke();
         panel.Children.Add(hideAll);
-        var maximumCard = Math.Max(1, (height - 48 - (events.Count - 1) * 10) / events.Count);
+        var maximumCard = Math.Max(1, (height - 54 - (events.Count - 1) * 10) / events.Count);
         foreach (var item in events)
         {
             var card = CreateCard(item, maximumCard);
@@ -106,7 +106,7 @@ public sealed class NativeNotificationOutput : INotificationOutput, IDisposable
         foreach (var subject in item.Subjects)
         {
             var open = new Button { Content = new TextBlock { Text = subject.Title, FontSize = 15, FontWeight = FontWeights.SemiBold, TextWrapping = TextWrapping.Wrap },
-                HorizontalContentAlignment = HorizontalAlignment.Left, Background = Brushes.Transparent, BorderThickness = new Thickness(0), Padding = new Thickness(0), MinHeight = 0, Margin = new Thickness(0, 0, 0, 8) };
+                HorizontalContentAlignment = HorizontalAlignment.Left, Background = Brushes.Transparent, BorderThickness = new Thickness(0), Padding = new Thickness(0), MinHeight = 44, Margin = new Thickness(0, 0, 0, 8) };
             AutomationProperties.SetName(open, "Открыть: " + subject.Title);
             open.Click += async (_, _) => await InvokeAsync(item, subject, "open", open, error);
             content.Children.Add(open);

@@ -282,6 +282,7 @@ public sealed class EditorViewModel : Observable
     public event Action? ValidationFailed;
     public string Heading => original is null ? "Новое дело" : "Редактировать задачу";
     public bool CanDelete => original is not null;
+    public TaskItem? SavedTask => original;
     public string Title { get => title; set { title = value; FieldChanged(); } }
     public string Description { get => description; set { description = value; FieldChanged(); } }
     public string Error { get => error; private set { error = value; Changed(); Changed(nameof(HasError)); } }

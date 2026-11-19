@@ -33,7 +33,7 @@ public partial class MainWindow : Window
         NewCommand = new(() => OpenEditor(false), () => CanNavigate() && !model.HasError);
         EditCommand = new(() => OpenEditor(true), () => model.HasSelection && CanNavigate() && !model.HasError);
         BackToListCommand = new(() => { showingDetails = false; AdaptLayout(); FocusSelected(); });
-        CancelEditorCommand = new(CloseEditor, () => editor?.IsBusy != true);
+        CancelEditorCommand = new(CloseEditor, CanNavigate);
         SettingsCommand = new(() =>
         {
             if (editor?.PersistDraft() == false) return;
@@ -53,8 +53,8 @@ public partial class MainWindow : Window
         historyNavigation = AddNavigation("История", "M2,2 V7 H7 M2,7 A7,7 0 1 1 2,13 M9,4 V10 L13,12", new AsyncCommand(() => NavigateAsync(true), CanNavigate));
         settingsNavigation = AddNavigation("Настройки", "M1,4 H17 M1,9 H17 M1,14 H17 M5,1 V7 M12,6 V12 M7,11 V17", SettingsCommand, bottom: true);
         InputBindings.Add(new KeyBinding(NewCommand, Key.N, ModifierKeys.Control));
-        InputBindings.Add(new KeyBinding(new RelayCommand(() => editor?.SaveCommand.Execute(null), () => editor?.SaveCommand.CanExecute(null) == true), Key.S, ModifierKeys.Control));
-        InputBindings.Add(new KeyBinding(new RelayCommand(() => { if (DeleteOverlay.IsVisible) CancelDeleteCommand.Execute(null); else CancelEditorCommand.Execute(null); }), Key.Escape, ModifierKeys.None));
+        InputBindings.Add(new KeyBinding(new RelayCommand(() => editor?.SaveCommand.Execute(null), () => CanNavigate() && editor?.SaveCommand.CanExecute(null) == true), Key.S, ModifierKeys.Control));
+        InputBindings.Add(new KeyBinding(new RelayCommand(() => { if (DeleteOverlay.IsVisible) CancelDeleteCommand.Execute(null); else if (CancelEditorCommand.CanExecute(null)) CancelEditorCommand.Execute(null); }), Key.Escape, ModifierKeys.None));
         Loaded += async (_, _) => await model.LoadAsync();
         timeRefresh.Tick += (_, _) => { if (!model.IsBusy) model.RefreshTime(); };
         Loaded += (_, _) => timeRefresh.Start();

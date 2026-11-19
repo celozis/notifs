@@ -44,6 +44,14 @@ internal static partial class UiScenario
         await IdleAsync();
         Assert(other.IsActive && ReferenceEquals(Keyboard.FocusedElement, input), "native arrival of three cards preserves the foreground window and typing focus");
         Assert(output.Window is { ShowActivated: false, ShowInTaskbar: false, IsVisible: true } && output.VisibleEvents.Select(x => x.Id).SequenceEqual(new[] { b.Id, c.Id }), "native stack shows B above C without activation or taskbar entry");
+        var work = SystemParameters.WorkArea;
+        Assert(Math.Abs(output.Window.Left + output.Window.ActualWidth - work.Right + 22) < 1 && Math.Abs(output.Window.Top + output.Window.ActualHeight - work.Bottom + 22) < 1,
+            "native stack anchors twenty-two DIP from primary work-area right and bottom edges");
+        Assert(Math.Abs(output.Window.ActualWidth - Math.Min(365, work.Width - 44)) < 1, "native width is 365 DIP or available primary width");
+        var stack = (StackPanel)output.Window.Content;
+        var upper = (Border)stack.Children[1]; var lower = (Border)stack.Children[2];
+        Assert(Math.Abs(lower.TranslatePoint(new Point(), stack).Y - upper.TranslatePoint(new Point(0, upper.ActualHeight), stack).Y - 10) < 1, "native cards have ten DIP spacing");
+        Assert(Descendants<Button>(output.Window).All(x => x.ActualHeight >= 44), "all native notification actions have at least 44 DIP height");
         await Task.Delay(11000);
         Assert(output.Window.IsVisible && output.VisibleEvents.Count == 2, "native cards remain visible for more than ten seconds");
         SaveImage(output.Window, "notifications-native.png");
@@ -59,10 +67,27 @@ internal static partial class UiScenario
         await runtime.RunOnceAsync();
         await IdleAsync();
         Assert(output.VisibleEvents.Single().Subjects.Single().Key.Id == task.Id, "runtime routes saved personal source to native output");
+        var open = Descendants<Button>(output.Window).Single(x => x.Content is TextBlock text && text.Text == task.Title);
+        open.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+        await UntilAsync(() => model.Selected?.Item.Id == task.Id && !model.IsBusy);
+        Assert(((ContentControl)main.FindName("EditorHost")).Content is null, "native title opens task details without creating an editor");
         var complete = Descendants<Button>(output.Window).Single(x => Equals(x.Content, "Готово"));
         complete.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
-        await UntilAsync(() => service.List(true).Any(x => x.Id == task.Id) && output.VisibleEvents.Count == 0);
+        await UntilAsync(() => service.List(true).Any(x => x.Id == task.Id) && output.VisibleEvents.Count == 0 && !model.IsBusy);
         Assert(service.List(true).Single().Title == task.Title, "native complete uses application command and removes related cards");
+        var second = service.SaveEditor(null, "Отложить настоящее событие", "", null, null, ImportanceRank.C,
+            new(DateOnly.FromDateTime(now), TimeOnly.FromDateTime(now), 60));
+        await runtime.RunOnceAsync();
+        var snooze = Descendants<Button>(output.Window).Single(x => Equals(x.Content, "Отложить на 15 мин"));
+        snooze.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+        await UntilAsync(() => service.IsSnoozed(second.Id) && output.VisibleEvents.Count == 0);
+        Assert(service.ReadPersonal(second.Id)?.SnoozedUntil > DateTimeOffset.Now.AddMinutes(14), "native snooze uses saved ordinary duration and removes personal card");
+        foreach (var title in new[] { "Закончить практическую работу", "Отправить домашнюю работу" })
+            service.SaveEditor(null, title, "", null, null, ImportanceRank.A, new(DateOnly.FromDateTime(now), TimeOnly.FromDateTime(now)));
+        await runtime.RunOnceAsync();
+        await IdleAsync();
+        Assert(output.VisibleEvents.Count == 2, "runtime delivers a batch of two independent saved personal reminders");
+        SaveImage(output.Window, "issue-4-personal-native.png");
         other.Close(); main.Close();
     }
 }

@@ -92,6 +92,24 @@ internal static partial class UiScenario
         ((MainViewModel)main.DataContext).RestoreDeletedCommand.Execute(null);
         await UntilAsync(() => service.ListAll().Count == 1 && !((MainViewModel)main.DataContext).IsBusy);
         Assert(service.ListAll().Single() == a, "WPF restore returns original task");
+        var b = service.Create("B · открытый редактор", "сохранённый B");
+        service.DeleteTask(a.Id);
+        var currentModel = (MainViewModel)main.DataContext;
+        await currentModel.LoadAsync(b.Id, true);
+        main.EditCommand.Execute(null);
+        await IdleAsync();
+        view = (EditorView)((ContentControl)main.FindName("EditorHost")).Content;
+        editor = (EditorViewModel)view.DataContext;
+        editor.Description = "несохранённый B";
+        currentModel.RestoreDeletedCommand.Execute(null);
+        await UntilAsync(() => currentModel.Selected?.Item.Id == a.Id && !currentModel.IsBusy);
+        main.DeleteCommand.Execute(null);
+        await IdleAsync();
+        Assert(((TextBlock)main.FindName("DeleteMessage")).Text.Contains(b.Title), "deletion from editor targets its own task after restoring another task");
+        var saveShortcut = main.InputBindings.OfType<KeyBinding>().Single(x => x.Key == Key.S);
+        Assert(!saveShortcut.Command.CanExecute(null), "Ctrl+S cannot apply hidden editor while deletion confirmation is open");
+        main.CancelDeleteCommand.Execute(null);
+        Assert(service.ListAll().Single(x => x.Id == b.Id).Description == "сохранённый B" && service.ReadDraft(b.Id)?.Description == "несохранённый B", "modal cancellation preserves saved task and independent draft");
         main.Close();
     }
 }

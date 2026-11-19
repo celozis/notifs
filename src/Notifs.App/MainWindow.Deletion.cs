@@ -15,16 +15,17 @@ public partial class MainWindow
     {
         DeleteCommand = new(() =>
         {
-            if (model.Selected is not { } row || editor?.PersistDraft() == false) return;
-            deletingId = row.Item.Id;
+            var task = editor is null ? model.Selected?.Item : editor.SavedTask;
+            if (task is null || editor?.PersistDraft() == false) return;
+            deletingId = task.Id;
             deleteInitiator = Keyboard.FocusedElement;
-            DeleteMessage.Text = $"«{row.Title}» исчезнет из списка и календаря. Последнее удаление можно восстановить.";
+            DeleteMessage.Text = $"«{task.Title}» исчезнет из списка и календаря. Последнее удаление можно восстановить.";
             DeleteError.Text = "";
             DeleteOverlay.Visibility = Visibility.Visible;
             Workspace.IsHitTestVisible = Navigation.IsHitTestVisible = false;
             CommandManager.InvalidateRequerySuggested();
             LeaveTask.Focus();
-        }, () => model.HasSelection && CanNavigate());
+        }, () => (editor is null ? model.HasSelection : editor.CanDelete) && CanNavigate());
         CancelDeleteCommand = new(CloseDelete, () => !model.IsBusy);
         ConfirmDeleteCommand = new(async () =>
         {
