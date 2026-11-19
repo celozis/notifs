@@ -23,7 +23,7 @@ public sealed record TaskItem(Guid Id, string Title, string Description, DateTim
 public sealed record TaskTiming(DateTimeOffset LocalNow, DateTimeOffset LocalCreatedAt, DateTimeOffset? DeadlineAt, TimeSpan? Slack, bool IsOverdue);
 
 /// <summary>Application boundary. Each operation owns a connection; persisted timestamps use UTC.</summary>
-public sealed class TaskService(string databasePath, TimeProvider? clock = null)
+public sealed partial class TaskService(string databasePath, TimeProvider? clock = null)
 {
     private readonly TimeProvider time = clock ?? TimeProvider.System;
     private const string Columns = "id,title,description,created_at,completed_at,deadline_date,deadline_time,estimate_minutes,rank";
@@ -41,7 +41,7 @@ public sealed class TaskService(string databasePath, TimeProvider? clock = null)
         command.Transaction = transaction;
         command.CommandText = "PRAGMA user_version";
         var version = Convert.ToInt32(command.ExecuteScalar(), CultureInfo.InvariantCulture);
-        if (version > 2) throw new IOException("Эта база создана более новой версией Notifs.");
+        if (version > 4) throw new IOException("Эта база создана более новой версией Notifs.");
         command.CommandText = """
             CREATE TABLE IF NOT EXISTS tasks (
               id TEXT PRIMARY KEY, title TEXT NOT NULL CHECK(length(trim(title)) > 0),
@@ -60,6 +60,14 @@ public sealed class TaskService(string databasePath, TimeProvider? clock = null)
                 """;
             command.ExecuteNonQuery();
         }
+        command.CommandText = """
+            CREATE TABLE IF NOT EXISTS task_drafts (draft_key TEXT PRIMARY KEY, data TEXT NOT NULL);
+            CREATE TABLE IF NOT EXISTS deleted_item (slot INTEGER PRIMARY KEY CHECK(slot=1), kind TEXT NOT NULL, data TEXT NOT NULL);
+            CREATE TABLE IF NOT EXISTS personal_reminders (task_id TEXT PRIMARY KEY REFERENCES tasks(id) ON DELETE CASCADE, data TEXT NOT NULL);
+            CREATE TABLE IF NOT EXISTS notification_settings (slot INTEGER PRIMARY KEY CHECK(slot=1), sound INTEGER NOT NULL, snooze_minutes INTEGER NOT NULL CHECK(snooze_minutes>0));
+            PRAGMA user_version = 4;
+            """;
+        command.ExecuteNonQuery();
         transaction.Commit();
     }
 
@@ -131,9 +139,13 @@ public sealed class TaskService(string databasePath, TimeProvider? clock = null)
         command.Parameters.AddWithValue("$rank", (int)rank);
     }
 
-    public TaskItem Complete(Guid id) => Update(id,
-        "UPDATE tasks SET completed_at=COALESCE(completed_at,$completed) WHERE id=$id",
-        command => command.Parameters.AddWithValue("$completed", FormatTime(time.GetUtcNow())));
+    public TaskItem Complete(Guid id)
+    {
+        var item = Update(id, "UPDATE tasks SET completed_at=COALESCE(completed_at,$completed) WHERE id=$id",
+            command => command.Parameters.AddWithValue("$completed", FormatTime(time.GetUtcNow())));
+        TaskNotificationsChanged?.Invoke(new("task", id), false);
+        return item;
+    }
 
     public TaskItem Restore(Guid id) => Update(id, "UPDATE tasks SET completed_at=NULL WHERE id=$id", _ => { });
 

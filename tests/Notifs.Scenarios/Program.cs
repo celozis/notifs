@@ -11,9 +11,23 @@ internal static class Program
     [STAThread]
     private static int Main(string[] args)
     {
+        if (args.Contains("--typing-target"))
+        {
+            var targetApp = new Application();
+            var input = new System.Windows.Controls.TextBox { AcceptsReturn = true, TextWrapping = TextWrapping.Wrap, FontSize = 20, Margin = new Thickness(20), Text = "Проверка ввода: " };
+            System.Windows.Automation.AutomationProperties.SetName(input, "Проверка печати при уведомлениях");
+            var target = new Window { Title = "Notifs QA — проверка печати", Width = 600, Height = 240, Left = 100, Top = 100, Content = input };
+            target.Loaded += (_, _) => { input.Focus(); input.CaretIndex = input.Text.Length; };
+            return targetApp.Run(target);
+        }
+        if (args.Contains("--manual-notifications")) return ManualNotifications.Run();
         var directory = Path.Combine(Path.GetTempPath(), "Notifs.Scenarios", Guid.NewGuid().ToString("N"));
         try
         {
+            DraftScenarios.Run(directory);
+            if (args.Contains("--drafts")) return 0;
+            NotificationScenarios.Run(directory);
+            if (args.Contains("--notifications")) return 0;
             FieldScenarios.Run(directory);
             if (args.Contains("--fields")) return 0;
             var clock = new ManualClock(new DateTimeOffset(2026, 11, 18, 10, 0, 0, TimeSpan.Zero));
@@ -78,7 +92,7 @@ internal static class Program
             editor.SaveCommand.Execute(null); // Invalid title is synchronous, no dispatcher pump needed.
             Check(editor.HasError && editor.Description == markdown && reopened.ListAll().Count == 2, "invalid UI submission retains Markdown and creates nothing");
             Console.WriteLine("All application and rendering checks passed.");
-            return UiScenario.Run(app, Path.Combine(directory, "ui.db"), args.Contains("--fields-ui"));
+            return UiScenario.Run(app, Path.Combine(directory, "ui.db"), args.Contains("--fields-ui"), args.Contains("--drafts-ui"), args.Contains("--notifications-ui"));
         }
         catch (Exception ex) { Console.Error.WriteLine(ex); return 1; }
         finally

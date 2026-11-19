@@ -5,6 +5,7 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
   </PropertyGroup>
   <ItemGroup>
+    <Content Include="Assets/notification.wav" CopyToOutputDirectory="PreserveNewest" />
     <ProjectReference Include="../Notifs.Core/Notifs.Core.csproj" />
     <PackageReference Include="Markdig" Version="1.6.0" />
   </ItemGroup>

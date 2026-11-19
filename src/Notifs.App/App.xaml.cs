@@ -16,8 +16,12 @@ public partial class App : Application
         var dataDirectory = Environment.GetEnvironmentVariable("NOTIFS_DATA_DIR")
             ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Notifs");
         var service = new TaskService(Path.Combine(dataDirectory, "notifs.db"));
-        var window = new MainWindow(new MainViewModel(service));
+        var model = new MainViewModel(service);
+        var window = new MainWindow(model);
         MainWindow = window;
+        ShutdownMode = ShutdownMode.OnMainWindowClose;
+        var notifications = new NotificationRuntime(service, model, window);
+        notifications.Start();
         window.Show();
     }
 }

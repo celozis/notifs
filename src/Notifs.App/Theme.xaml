@@ -12,6 +12,7 @@
   <SolidColorBrush x:Key="Danger" Color="#FFB5AE" />
   <SolidColorBrush x:Key="Navigation" Color="#181A17" />
   <SolidColorBrush x:Key="Hover" Color="#393C33" />
+  <SolidColorBrush x:Key="NotificationSurface" Color="#33372F" />
   <SolidColorBrush x:Key="RankSBackground" Color="#6A2C35"/><SolidColorBrush x:Key="RankSText" Color="#FFD4D6"/>
   <SolidColorBrush x:Key="RankABackground" Color="#65451F"/><SolidColorBrush x:Key="RankAText" Color="#FFDB9E"/>
   <SolidColorBrush x:Key="RankBBackground" Color="#5D5429"/><SolidColorBrush x:Key="RankBText" Color="#F4E6AC"/>
@@ -35,6 +36,22 @@
   <FontFamily x:Key="BodyFont">Segoe UI</FontFamily>
   <FontFamily x:Key="CodeFont">Consolas</FontFamily>
   <BooleanToVisibilityConverter x:Key="BoolVisibility" />
+  <Style TargetType="CheckBox">
+    <Setter Property="Foreground" Value="{DynamicResource Ink}"/><Setter Property="MinHeight" Value="44"/><Setter Property="FocusVisualStyle" Value="{DynamicResource FocusOutline}"/>
+    <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="CheckBox"><Grid Background="Transparent"><Grid.ColumnDefinitions><ColumnDefinition Width="18"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+      <Border x:Name="CheckSurface" Height="18" Background="{DynamicResource Background}" BorderBrush="{DynamicResource Line}" BorderThickness="1" VerticalAlignment="Center" CornerRadius="2"><Path x:Name="CheckMark" Data="M2,8 L6,12 L14,3" Stroke="{DynamicResource OnPrimary}" StrokeThickness="2" Margin="1" Visibility="Collapsed"/></Border>
+      <ContentPresenter Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center" RecognizesAccessKey="True"/>
+    </Grid><ControlTemplate.Triggers><Trigger Property="IsChecked" Value="True"><Setter TargetName="CheckSurface" Property="Background" Value="{DynamicResource Primary}"/><Setter TargetName="CheckSurface" Property="BorderBrush" Value="{DynamicResource Primary}"/><Setter TargetName="CheckMark" Property="Visibility" Value="Visible"/></Trigger><Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="CheckSurface" Property="BorderBrush" Value="{DynamicResource Primary}"/></Trigger></ControlTemplate.Triggers></ControlTemplate></Setter.Value></Setter>
+  </Style>
+  <Style TargetType="Expander">
+    <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="Expander"><StackPanel>
+      <ToggleButton x:Name="ExpansionToggle" IsChecked="{Binding IsExpanded, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}" HorizontalContentAlignment="Left" MinHeight="44" Foreground="{DynamicResource Primary}" Background="Transparent" BorderThickness="0" FocusVisualStyle="{DynamicResource FocusOutline}">
+        <ToggleButton.Template><ControlTemplate TargetType="ToggleButton"><Border Background="{TemplateBinding Background}"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="16"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions><TextBlock x:Name="Arrow" Text="▸" Foreground="{TemplateBinding Foreground}" VerticalAlignment="Center"/><ContentPresenter Grid.Column="1" VerticalAlignment="Center"/></Grid></Border><ControlTemplate.Triggers><Trigger Property="IsChecked" Value="True"><Setter TargetName="Arrow" Property="Text" Value="▾"/></Trigger></ControlTemplate.Triggers></ControlTemplate></ToggleButton.Template>
+        <ContentPresenter Content="{TemplateBinding Header}"/>
+      </ToggleButton>
+      <ContentPresenter x:Name="ExpandedContent" Visibility="Collapsed"/>
+    </StackPanel><ControlTemplate.Triggers><Trigger Property="IsExpanded" Value="True"><Setter TargetName="ExpandedContent" Property="Visibility" Value="Visible"/></Trigger></ControlTemplate.Triggers></ControlTemplate></Setter.Value></Setter>
+  </Style>
   <Style x:Key="FocusOutline">
     <Setter Property="Control.Template"><Setter.Value><ControlTemplate>
       <Rectangle Stroke="{DynamicResource Primary}" StrokeThickness="2" StrokeDashArray="2 1" Margin="2" RadiusX="6" RadiusY="6" />

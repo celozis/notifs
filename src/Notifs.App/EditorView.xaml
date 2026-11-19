@@ -4,7 +4,7 @@
     <StackPanel Margin="0,0,0,24"><TextBlock Text="{Binding Heading}" FontSize="29" FontWeight="SemiBold" /><TextBlock Text="Сначала главное, подробности можно добавить позже." Style="{StaticResource MutedText}" Margin="0,8,0,0" /></StackPanel>
     <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
     <Grid IsEnabled="{Binding CanEdit}" >
-      <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="*" /></Grid.RowDefinitions>
+      <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
       <Label Content="Название *" Target="{Binding ElementName=TitleInput}" FontWeight="SemiBold" />
       <TextBox TextWrapping="Wrap" x:Name="TitleInput" Grid.Row="1" Text="{Binding Title, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="Название задачи, обязательное поле" AutomationProperties.HelpText="{Binding Error}" />
       <TextBlock Grid.Row="2" Text="{Binding Error}" Visibility="{Binding HasError, Converter={StaticResource BoolVisibility}}" Foreground="{DynamicResource Danger}" FontSize="14" Margin="0,8,0,0" AutomationProperties.LiveSetting="Assertive" />
@@ -32,19 +32,31 @@
         </StackPanel>
       </Grid>
       <StackPanel Grid.Row="4" Margin="0,6,0,12"><Label Content="Описание" Target="{Binding ElementName=DescriptionInput}" FontWeight="SemiBold" /><TextBlock Text="Markdown: # заголовок, - список, **жирный**, *курсив*, ```код```." Style="{StaticResource MutedText}" /></StackPanel>
-      <TabControl Grid.Row="5" MinHeight="200" Background="{DynamicResource Surface}" BorderBrush="{DynamicResource Line}" Padding="12">
-        <TabItem Header="  Редактор  " MinHeight="44" AutomationProperties.Name="Редактор Markdown">
+      <TabControl Grid.Row="5" MinHeight="240" Height="300" Background="{DynamicResource Surface}" BorderBrush="{DynamicResource Line}" Padding="12">
+        <TabItem Header="  Редактор  " MinHeight="44" AutomationProperties.Name="Редактор Markdown"><DockPanel>
+          <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,8"><Button Content="Жирный" Click="BoldClick" Margin="0,0,8,0" ToolTip="Ctrl+B"/><Button Content="Курсив" Click="ItalicClick" ToolTip="Ctrl+I"/></WrapPanel>
           <TextBox x:Name="DescriptionInput" Text="{Binding Description, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" VerticalContentAlignment="Top" FontFamily="{StaticResource CodeFont}" FontSize="15" BorderThickness="0" Padding="8" AutomationProperties.Name="Описание в формате Markdown" />
-        </TabItem>
+        </DockPanel></TabItem>
         <TabItem Header="  Просмотр  " MinHeight="44" AutomationProperties.Name="Форматированный просмотр">
           <local:MarkdownView Source="{Binding Description}" AutomationProperties.Name="Предварительный просмотр описания" />
         </TabItem>
       </TabControl>
+      <Expander x:Name="PersonalExpander" Grid.Row="6" Header="Личные напоминания" Foreground="{DynamicResource Primary}" Margin="0,22,0,4" IsExpanded="{Binding PersonalEnabled, Mode=OneWay}">
+        <StackPanel Margin="0,16,0,0"><CheckBox Content="Напоминать об этой задаче" IsChecked="{Binding PersonalEnabled}" MinHeight="44" Foreground="{DynamicResource Ink}"/>
+          <StackPanel IsEnabled="{Binding PersonalEnabled}">
+            <Label Content="Первое напоминание · местная дата" Target="{Binding ElementName=PersonalDateInput}"/><TextBox x:Name="PersonalDateInput" Text="{Binding PersonalDate, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="Дата первого личного напоминания"/><TextBlock Text="ДД.ММ.ГГГГ" Style="{StaticResource MutedText}"/>
+            <Label Content="Местное время" Target="{Binding ElementName=PersonalTimeInput}"/><TextBox x:Name="PersonalTimeInput" Text="{Binding PersonalTime, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="Время первого личного напоминания"/><TextBlock Text="ЧЧ:ММ" Style="{StaticResource MutedText}"/>
+            <Label Content="Повтор до выполнения, минуты" Target="{Binding ElementName=RepeatMinutesInput}"/><TextBox x:Name="RepeatMinutesInput" Text="{Binding RepeatMinutes, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="Повтор личного напоминания в минутах"/><TextBlock Text="Необязательно. Пустое поле — только первое напоминание." Style="{StaticResource MutedText}"/>
+          </StackPanel>
+        </StackPanel>
+      </Expander>
     </Grid>
     </ScrollViewer>
     <WrapPanel Grid.Row="2" Margin="0,24,0,0">
       <Button Content="{Binding SaveLabel}" Command="{Binding SaveCommand}" Style="{StaticResource PrimaryButton}" ToolTip="Сохранить (Ctrl+S)" Margin="0,0,8,8" />
       <Button Content="К задачам" Command="{Binding CancelEditorCommand, RelativeSource={RelativeSource AncestorType=local:MainWindow}}" IsEnabled="{Binding CanEdit}" Margin="0,0,0,8" />
+      <Button Content="Отбросить изменения" Command="{Binding DiscardCommand}" Margin="8,0,0,8"/>
+      <Button Content="Удалить" Command="{Binding DeleteCommand, RelativeSource={RelativeSource AncestorType=local:MainWindow}}" Foreground="{DynamicResource Danger}" Visibility="{Binding CanDelete, Converter={StaticResource BoolVisibility}}" Margin="8,0,0,8"/>
     </WrapPanel>
   </Grid>
 </UserControl>
