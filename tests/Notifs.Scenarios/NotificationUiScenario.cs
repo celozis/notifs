@@ -44,6 +44,7 @@ internal static partial class UiScenario
         await IdleAsync();
         Assert(other.IsActive && ReferenceEquals(Keyboard.FocusedElement, input), "native arrival of three cards preserves the foreground window and typing focus");
         Assert(output.Window is { ShowActivated: false, ShowInTaskbar: false, IsVisible: true } && output.VisibleEvents.Select(x => x.Id).SequenceEqual(new[] { b.Id, c.Id }), "native stack shows B above C without activation or taskbar entry");
+        await Task.Delay(250); // Measure the settled layout after the approved 180 ms entrance.
         var work = SystemParameters.WorkArea;
         Assert(Math.Abs(output.Window.Left + output.Window.ActualWidth - work.Right + 22) < 1 && Math.Abs(output.Window.Top + output.Window.ActualHeight - work.Bottom + 22) < 1,
             "native stack anchors twenty-two DIP from primary work-area right and bottom edges");
@@ -87,6 +88,7 @@ internal static partial class UiScenario
         await runtime.RunOnceAsync();
         await IdleAsync();
         Assert(output.VisibleEvents.Count == 2, "runtime delivers a batch of two independent saved personal reminders");
+        await Task.Delay(250); // Capture the final geometry, not a frame of the entrance animation.
         SaveImage(output.Window, "issue-4-personal-native.png");
         other.Close(); main.Close();
     }
