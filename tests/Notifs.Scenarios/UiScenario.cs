@@ -12,13 +12,13 @@ namespace Notifs.Scenarios;
 
 internal static partial class UiScenario
 {
-    public static int Run(Application app, string databasePath, bool fieldsOnly = false)
+    public static int Run(Application app, string databasePath, bool fieldsOnly = false, bool draftsOnly = false, bool notificationsOnly = false)
     {
         var result = 1;
         app.ShutdownMode = ShutdownMode.OnExplicitShutdown;
         app.Dispatcher.InvokeAsync(async () =>
         {
-            try { if (fieldsOnly) await RunFieldsAsync(databasePath); else await RunAsync(databasePath); result = 0; Console.WriteLine("PASS all requested WPF scenarios"); }
+            try { if (notificationsOnly) await RunNotificationsAsync(databasePath); else if (draftsOnly) await RunDraftsAsync(databasePath); else if (fieldsOnly) await RunFieldsAsync(databasePath); else { await RunAsync(databasePath); await RunDraftsAsync(databasePath + ".drafts"); await RunNotificationsAsync(databasePath + ".notifications"); } result = 0; Console.WriteLine("PASS all requested WPF scenarios"); }
             catch (Exception ex) { Console.Error.WriteLine(ex); }
             finally { app.Shutdown(); }
         });
@@ -246,7 +246,7 @@ internal static partial class UiScenario
             foreach (var descendant in Descendants<T>(child)) yield return descendant;
         }
     }
-    private static void SaveImage(Window window, string name)
+    internal static void SaveImage(Window window, string name)
     {
         window.UpdateLayout();
         var root = (FrameworkElement)window.Content;

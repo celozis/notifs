@@ -63,6 +63,9 @@ public enum TaskFilter { All, Incomplete, Completed }
 public sealed class MainViewModel : Observable
 {
     private readonly TaskService service;
+    internal TaskService Service => service;
+    public bool HasDeleted { get; private set; }
+    public AsyncCommand RestoreDeletedCommand { get; }
     private List<TaskItem> all = [];
     private TaskRow? selected;
     private bool history;
@@ -106,6 +109,15 @@ public sealed class MainViewModel : Observable
     public MainViewModel(TaskService service)
     {
         this.service = service;
+        RestoreDeletedCommand = new(async () =>
+        {
+            IsBusy = true;
+            Guid? id = null;
+            try { id = (await Task.Run(service.RestoreDeleted)).Id; }
+            catch (Exception ex) when (IsStorageError(ex)) { ShowStorageError(); }
+            finally { IsBusy = false; }
+            if (id is not null) { history = false; filter = TaskFilter.All; await LoadAsync(id, true); }
+        }, () => HasDeleted && !IsBusy);
         ActiveCommand = new(() => SwitchAsync(false), () => !IsBusy);
         HistoryCommand = new(() => SwitchAsync(true), () => !IsBusy);
         RefreshCommand = new(() => LoadAsync(), () => !IsBusy);
@@ -127,6 +139,7 @@ public sealed class MainViewModel : Observable
             var items = await Task.Run(() =>
             {
                 if (!initialized) { service.Initialize(); initialized = true; }
+                HasDeleted = service.DeletedTitle is not null;
                 return service.ListAll();
             });
             var id = selectId ?? Selected?.Item.Id;
@@ -151,6 +164,7 @@ public sealed class MainViewModel : Observable
             Selected = Tasks.FirstOrDefault(row => row.Item.Id == id) ?? Tasks.FirstOrDefault();
             Status = "Все изменения сохранены на этом компьютере";
             RefreshLabels();
+            Changed(nameof(HasDeleted));
         }
         catch (Exception ex) when (IsStorageError(ex)) { ShowStorageError(); }
         finally { IsBusy = false; }
@@ -175,7 +189,7 @@ public sealed class MainViewModel : Observable
             var updated = await Task.Run(() => restore ? service.Restore(row.Item.Id) : service.Complete(row.Item.Id));
             // Update only after SQLite confirms the write; keep the row and its position.
             row.Update(updated);
-            heldPositions.TryAdd(row.Item.Id, Tasks.IndexOf(row));
+            if (Tasks.Contains(row)) heldPositions.TryAdd(row.Item.Id, Tasks.IndexOf(row));
             var index = all.FindIndex(x => x.Id == updated.Id);
             if (index >= 0) all[index] = updated;
             RefreshLabels();
@@ -186,6 +200,32 @@ public sealed class MainViewModel : Observable
     }
 
     public EditorViewModel CreateEditor(bool edit) => new(service, edit ? Selected?.Item : null);
+    public async Task CompleteFromNotificationAsync(Guid id)
+    {
+        if (IsBusy) throw new IOException("Дождитесь текущей операции и повторите действие.");
+        var row = Tasks.FirstOrDefault(x => x.Item.Id == id) ?? new TaskRow(service.ListAll().SingleOrDefault(x => x.Id == id)
+            ?? throw new KeyNotFoundException("Задача больше не существует."), service);
+        await ChangeStateAsync(row, false);
+        if (HasError) throw new IOException(Error);
+    }
+    public async Task SelectTaskAsync(Guid id)
+    {
+        history = false; filter = TaskFilter.All;
+        await LoadAsync(id, true);
+    }
+    private const string NotificationError = "Не удалось обработать личные напоминания. Проверьте доступ к папке данных; повторим автоматически.";
+    internal void ReportNotificationError() { if (!HasError || Error == NotificationError) Error = NotificationError; }
+    internal void ClearNotificationError() { if (Error == NotificationError) Error = ""; }
+    public async Task<bool> DeleteAsync(Guid id)
+    {
+        IsBusy = true;
+        try { await Task.Run(() => service.DeleteTask(id)); }
+        catch (Exception ex) when (IsStorageError(ex)) { ShowStorageError(); return false; }
+        finally { IsBusy = false; }
+        await LoadAsync(reapplyFilter: true);
+        Status = "Задача удалена. Последнее удаление можно восстановить.";
+        return true;
+    }
     public async Task EditorSavedAsync(Guid id, bool created)
     {
         if (created) { history = false; filter = TaskFilter.All; }
@@ -224,6 +264,13 @@ public sealed class EditorViewModel : Observable
     private string estimateHours;
     private string estimateMinutes;
     private ImportanceRank rank;
+    private PersonalSchedule? originalPersonal;
+    private bool personalEnabled;
+    private string personalDate = "", personalTime = "", repeatMinutes = "";
+    public bool PersonalEnabled { get => personalEnabled; set { personalEnabled = value; FieldChanged(); } }
+    public string PersonalDate { get => personalDate; set { personalDate = value; FieldChanged(); } }
+    public string PersonalTime { get => personalTime; set { personalTime = value; FieldChanged(); } }
+    public string RepeatMinutes { get => repeatMinutes; set { repeatMinutes = value; FieldChanged(); } }
     public string DeadlineDate { get => deadlineDate; set { deadlineDate = value; FieldChanged(); } }
     public string DeadlineTime { get => deadlineTime; set { deadlineTime = value; FieldChanged(); } }
     public string EstimateHours { get => estimateHours; set { estimateHours = value; FieldChanged(); } }
@@ -234,8 +281,10 @@ public sealed class EditorViewModel : Observable
     public event Action<Guid>? Saved;
     public event Action? ValidationFailed;
     public string Heading => original is null ? "Новое дело" : "Редактировать задачу";
-    public string Title { get => title; set { title = value; Changed(); Changed(nameof(IsDirty)); } }
-    public string Description { get => description; set { description = value; Changed(); Changed(nameof(IsDirty)); } }
+    public bool CanDelete => original is not null;
+    public TaskItem? SavedTask => original;
+    public string Title { get => title; set { title = value; FieldChanged(); } }
+    public string Description { get => description; set { description = value; FieldChanged(); } }
     public string Error { get => error; private set { error = value; Changed(); Changed(nameof(HasError)); } }
     public bool HasError => Error.Length > 0;
     public bool IsBusy { get => busy; private set { busy = value; Changed(); Changed(nameof(CanEdit)); Changed(nameof(SaveLabel)); CommandManager.InvalidateRequerySuggested(); } }
@@ -243,10 +292,13 @@ public sealed class EditorViewModel : Observable
     public string SaveLabel => IsBusy ? "Сохраняем…" : "Сохранить задачу";
     public bool IsDirty => !saved && (Title != (original?.Title ?? "") || Description != (original?.Description ?? "")
         || DeadlineDate != (original?.Deadline?.Date.ToString("dd.MM.yyyy") ?? "") || DeadlineTime != (original?.Deadline?.Time?.ToString("HH:mm") ?? "")
-        || EstimateHours != OriginalHours || EstimateMinutes != OriginalMinutes || Rank != (original?.Rank ?? ImportanceRank.B));
+        || EstimateHours != OriginalHours || EstimateMinutes != OriginalMinutes || Rank != (original?.Rank ?? ImportanceRank.B)
+        || PersonalEnabled != (originalPersonal is not null) || PersonalDate != (originalPersonal?.Date.ToString("dd.MM.yyyy") ?? "")
+        || PersonalTime != (originalPersonal?.Time.ToString("HH:mm") ?? "") || RepeatMinutes != (originalPersonal?.RepeatMinutes?.ToString() ?? ""));
     private string OriginalHours => original?.EstimateMinutes is { } minutes ? (minutes / 60).ToString() : "";
     private string OriginalMinutes => original?.EstimateMinutes is { } minutes ? (minutes % 60).ToString() : "";
     public AsyncCommand SaveCommand { get; }
+    public RelayCommand DiscardCommand { get; }
     public EditorViewModel(TaskService service, TaskItem? original)
     {
         this.service = service;
@@ -258,13 +310,53 @@ public sealed class EditorViewModel : Observable
         estimateHours = OriginalHours;
         estimateMinutes = OriginalMinutes;
         rank = original?.Rank ?? ImportanceRank.B;
+        try
+        {
+            originalPersonal = original is null ? null : service.ReadPersonal(original.Id)?.Schedule;
+            personalEnabled = originalPersonal is not null;
+            personalDate = originalPersonal?.Date.ToString("dd.MM.yyyy") ?? "";
+            personalTime = originalPersonal?.Time.ToString("HH:mm") ?? "";
+            repeatMinutes = originalPersonal?.RepeatMinutes?.ToString() ?? "";
+            if (service.ReadDraft(original?.Id) is { } draft) ApplyDraft(draft);
+        }
+        catch (Exception ex) when (MainViewModel.IsStorageError(ex)) { Error = "Не удалось прочитать черновик. Проверьте папку данных."; }
         SaveCommand = new(SaveAsync, () => !IsBusy && !saved);
+        DiscardCommand = new(() =>
+        {
+            try
+            {
+                service.DiscardDraft(original?.Id);
+                ApplyDraft(new(original?.Title ?? "", original?.Description ?? "", original?.Deadline?.Date.ToString("dd.MM.yyyy") ?? "", original?.Deadline?.Time?.ToString("HH:mm") ?? "", OriginalHours, OriginalMinutes, original?.Rank ?? ImportanceRank.B,
+                    originalPersonal is not null, originalPersonal?.Date.ToString("dd.MM.yyyy") ?? "", originalPersonal?.Time.ToString("HH:mm") ?? "", originalPersonal?.RepeatMinutes?.ToString() ?? ""));
+                Error = "";
+                foreach (var name in new[] { nameof(Title), nameof(Description), nameof(DeadlineDate), nameof(DeadlineTime), nameof(EstimateHours), nameof(EstimateMinutes), nameof(Rank), nameof(PersonalEnabled), nameof(PersonalDate), nameof(PersonalTime), nameof(RepeatMinutes), nameof(IsDirty) }) Changed(name);
+            }
+            catch (Exception ex) when (MainViewModel.IsStorageError(ex)) { Error = "Не удалось отбросить изменения. Черновик остаётся в форме."; }
+        }, () => !IsBusy && !saved);
+    }
+    private void ApplyDraft(TaskDraft draft)
+    {
+        title = draft.Title; description = draft.Description; deadlineDate = draft.DeadlineDate; deadlineTime = draft.DeadlineTime;
+        estimateHours = draft.EstimateHours; estimateMinutes = draft.EstimateMinutes; rank = draft.Rank;
+        personalEnabled = draft.PersonalEnabled; personalDate = draft.PersonalDate; personalTime = draft.PersonalTime; repeatMinutes = draft.RepeatMinutes;
+    }
+    public bool PersistDraft()
+    {
+        if (saved) return true;
+        try
+        {
+            if (!IsDirty) service.DiscardDraft(original?.Id);
+            else service.SaveDraft(original?.Id, new(Title, Description, DeadlineDate, DeadlineTime, EstimateHours, EstimateMinutes, Rank, PersonalEnabled, PersonalDate, PersonalTime, RepeatMinutes));
+            return true;
+        }
+        catch (Exception ex) when (MainViewModel.IsStorageError(ex)) { Error = "Не удалось записать черновик. Ввод остаётся здесь; повторите сохранение перед выходом."; return false; }
     }
     private async Task SaveAsync()
     {
         Error = "";
         if (string.IsNullOrWhiteSpace(Title)) { Invalid("TitleInput", "Введите название задачи. Остальные поля останутся на месте."); return; }
         if (!TryFields(out var deadline, out var estimate)) return;
+        if (!TryPersonal(out var personal)) return;
         var submittedTitle = Title;
         var submittedDescription = Description;
         IsBusy = true;
@@ -272,9 +364,7 @@ public sealed class EditorViewModel : Observable
         {
             var id = await Task.Run(() =>
             {
-                if (original is null) return service.Create(submittedTitle, submittedDescription, deadline, estimate, Rank).Id;
-                service.Edit(original.Id, submittedTitle, submittedDescription, deadline, estimate, Rank);
-                return original.Id;
+                return service.SaveEditor(original?.Id, submittedTitle, submittedDescription, deadline, estimate, Rank, personal).Id;
             });
             saved = true;
             Saved?.Invoke(id);
@@ -288,7 +378,7 @@ public sealed class EditorViewModel : Observable
         finally { IsBusy = false; }
     }
     private void Invalid(string field, string message) { InvalidField = field; Error = message; ValidationFailed?.Invoke(); }
-    private void FieldChanged([CallerMemberName] string? name = null) { Changed(name); Changed(nameof(IsDirty)); Error = ""; }
+    private void FieldChanged([CallerMemberName] string? name = null) { Changed(name); Changed(nameof(IsDirty)); Error = ""; PersistDraft(); }
     private bool TryFields(out TaskDeadline? deadline, out int? estimate)
     {
         deadline = null; estimate = null;
@@ -320,5 +410,23 @@ public sealed class EditorViewModel : Observable
     {
         value = 0;
         return string.IsNullOrWhiteSpace(text) || int.TryParse(text.Trim(), System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out value);
+    }
+    private bool TryPersonal(out PersonalSchedule? schedule)
+    {
+        schedule = null;
+        if (!PersonalEnabled) return true;
+        if (!DateOnly.TryParseExact(PersonalDate.Trim(), "dd.MM.yyyy", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out var date))
+        { Invalid("PersonalDateInput", "Укажите дату первого напоминания: ДД.ММ.ГГГГ."); return false; }
+        if (!TimeOnly.TryParseExact(PersonalTime.Trim(), "HH:mm", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out var exact))
+        { Invalid("PersonalTimeInput", "Укажите местное время первого напоминания: ЧЧ:ММ."); return false; }
+        int? repeat = null;
+        if (!string.IsNullOrWhiteSpace(RepeatMinutes))
+        {
+            if (!WholeNumber(RepeatMinutes, out var minutes) || minutes <= 0)
+            { Invalid("RepeatMinutesInput", "Повтор: положительное целое число минут либо пустое поле."); return false; }
+            repeat = minutes;
+        }
+        schedule = new(date, exact, repeat);
+        return true;
     }
 }

@@ -14,6 +14,7 @@ public partial class MainWindow : Window
     public RelayCommand EditCommand { get; }
     public RelayCommand BackToListCommand { get; }
     public RelayCommand CancelEditorCommand { get; }
+    public RelayCommand SettingsCommand { get; }
     private readonly MainViewModel model;
     private EditorViewModel? editor;
     private readonly Dictionary<Guid, EditorViewModel> pendingEdits = [];
@@ -22,15 +23,26 @@ public partial class MainWindow : Window
     private readonly List<(Button Button, TextBlock Label)> navigation = [];
     private Button? activeNavigation;
     private Button? historyNavigation;
+    private Button? settingsNavigation;
     private readonly DispatcherTimer timeRefresh = new() { Interval = TimeSpan.FromSeconds(1) };
 
     public MainWindow(MainViewModel model)
     {
         this.model = model;
-        NewCommand = new(() => OpenEditor(false), () => !model.IsBusy && !model.HasError && editor?.IsBusy != true);
-        EditCommand = new(() => OpenEditor(true), () => model.HasSelection && !model.IsBusy && !model.HasError && editor?.IsBusy != true);
+        InitializeDeletion();
+        NewCommand = new(() => OpenEditor(false), () => CanNavigate() && !model.HasError);
+        EditCommand = new(() => OpenEditor(true), () => model.HasSelection && CanNavigate() && !model.HasError);
         BackToListCommand = new(() => { showingDetails = false; AdaptLayout(); FocusSelected(); });
-        CancelEditorCommand = new(CloseEditor, () => editor?.IsBusy != true);
+        CancelEditorCommand = new(CloseEditor, CanNavigate);
+        SettingsCommand = new(() =>
+        {
+            if (editor?.PersistDraft() == false) return;
+            CloseEditor();
+            SettingsHost.Content = new SettingsView(new SettingsViewModel(model.Service));
+            SettingsHost.Visibility = Visibility.Visible;
+            BrowseView.Visibility = Visibility.Collapsed;
+            AdaptLayout();
+        }, CanNavigate);
         InitializeComponent();
         DataContext = model;
         AddNavigation("Новая задача", "M9,1 V17 M1,9 H17", NewCommand, primary: true);
@@ -39,10 +51,10 @@ public partial class MainWindow : Window
         AddNavigation("Календарь", "M2,3 H16 V17 H2 Z M5,0 V6 M13,0 V6 M2,8 H16 M6,11 H7 M11,11 H12", null);
         AddNavigation("Напоминания", "M3,13 H15 L13,10 V6 A4,4 0 0 0 5,6 V10 Z M7,16 Q9,19 11,16", null);
         historyNavigation = AddNavigation("История", "M2,2 V7 H7 M2,7 A7,7 0 1 1 2,13 M9,4 V10 L13,12", new AsyncCommand(() => NavigateAsync(true), CanNavigate));
-        AddNavigation("Настройки", "M1,4 H17 M1,9 H17 M1,14 H17 M5,1 V7 M12,6 V12 M7,11 V17", null, bottom: true);
+        settingsNavigation = AddNavigation("Настройки", "M1,4 H17 M1,9 H17 M1,14 H17 M5,1 V7 M12,6 V12 M7,11 V17", SettingsCommand, bottom: true);
         InputBindings.Add(new KeyBinding(NewCommand, Key.N, ModifierKeys.Control));
-        InputBindings.Add(new KeyBinding(new RelayCommand(() => editor?.SaveCommand.Execute(null), () => editor?.SaveCommand.CanExecute(null) == true), Key.S, ModifierKeys.Control));
-        InputBindings.Add(new KeyBinding(CancelEditorCommand, Key.Escape, ModifierKeys.None));
+        InputBindings.Add(new KeyBinding(new RelayCommand(() => editor?.SaveCommand.Execute(null), () => CanNavigate() && editor?.SaveCommand.CanExecute(null) == true), Key.S, ModifierKeys.Control));
+        InputBindings.Add(new KeyBinding(new RelayCommand(() => { if (DeleteOverlay.IsVisible) CancelDeleteCommand.Execute(null); else if (CancelEditorCommand.CanExecute(null)) CancelEditorCommand.Execute(null); }), Key.Escape, ModifierKeys.None));
         Loaded += async (_, _) => await model.LoadAsync();
         timeRefresh.Tick += (_, _) => { if (!model.IsBusy) model.RefreshTime(); };
         Loaded += (_, _) => timeRefresh.Start();
@@ -62,13 +74,23 @@ public partial class MainWindow : Window
             if (args.Key is Key.Enter or Key.Space && model.HasSelection && args.OriginalSource is ListBoxItem)
             { showingDetails = true; AdaptLayout(); BackToList.Focus(); args.Handled = true; }
         };
-        Closing += (_, args) => { if (editor?.IsBusy == true || model.IsBusy) args.Cancel = true; };
+        Closing += (_, args) => { if (!CanNavigate() || editor?.PersistDraft() == false) args.Cancel = true; };
         AdaptLayout();
     }
 
-    private bool CanNavigate() => !model.IsBusy && editor?.IsBusy != true;
+    private bool CanNavigate() => !model.IsBusy && editor?.IsBusy != true && DeleteOverlay?.IsVisible != true && (SettingsHost?.Content as SettingsView)?.DataContext is not SettingsViewModel { IsBusy: true };
+    public async Task OpenTaskAsync(Guid id)
+    {
+        if (!CanNavigate() || editor?.PersistDraft() == false || DeleteOverlay.IsVisible) throw new System.IO.IOException("Завершите текущее действие и повторите открытие.");
+        CloseEditor();
+        await model.SelectTaskAsync(id);
+        showingDetails = true;
+        if (WindowState == WindowState.Minimized) WindowState = WindowState.Normal;
+        Show(); Activate(); AdaptLayout();
+    }
     private async Task NavigateAsync(bool history)
     {
+        if (editor?.PersistDraft() == false) return;
         CloseEditor();
         showingDetails = false;
         (history ? model.HistoryCommand : model.ActiveCommand).Execute(null);
@@ -95,6 +117,8 @@ public partial class MainWindow : Window
     private void OpenEditor(bool edit)
     {
         if (editor?.IsBusy == true) return;
+        if (editor?.PersistDraft() == false) return;
+        SettingsHost.Visibility = Visibility.Collapsed;
         var originalId = edit ? model.Selected?.Item.Id : null;
         editor = originalId is { } id && pendingEdits.TryGetValue(id, out var pending) ? pending : !edit && pendingNew is not null ? pendingNew : model.CreateEditor(edit);
         if (originalId is { } key) pendingEdits[key] = editor; else pendingNew = editor;
@@ -124,12 +148,14 @@ public partial class MainWindow : Window
     private void DetachEditor(EditorView view) { if (view.DataContext is EditorViewModel previous) previous.Saved -= EditorSaved; }
     private void CloseEditor()
     {
+        if (editor?.PersistDraft() == false) return;
         if (EditorHost.Content is EditorView view) DetachEditor(view);
         editor = null;
         showingDetails = false;
         savedCallback = null;
         EditorHost.Content = null;
         EditorHost.Visibility = Visibility.Collapsed;
+        SettingsHost.Visibility = Visibility.Collapsed;
         BrowseView.Visibility = Visibility.Visible;
         StatusNote.SetBinding(TextBlock.TextProperty, new System.Windows.Data.Binding(nameof(model.Status)));
         AdaptLayout();
@@ -181,7 +207,9 @@ public partial class MainWindow : Window
         ListPane.Visibility = stacked && showingDetails && model.HasSelection ? Visibility.Collapsed : Visibility.Visible;
         DetailPane.Visibility = stacked && (!showingDetails || !model.HasSelection) ? Visibility.Collapsed : Visibility.Visible;
         FilterBar.Visibility = model.IsHistory ? Visibility.Collapsed : Visibility.Visible;
-        if (activeNavigation is not null) activeNavigation.Background = (Brush)FindResource(model.IsHistory ? "Navigation" : "Selected");
-        if (historyNavigation is not null) historyNavigation.Background = (Brush)FindResource(model.IsHistory ? "Selected" : "Navigation");
+        var settingsOpen = SettingsHost.IsVisible;
+        if (activeNavigation is not null) activeNavigation.Background = (Brush)FindResource(model.IsHistory || settingsOpen ? "Navigation" : "Selected");
+        if (historyNavigation is not null) historyNavigation.Background = (Brush)FindResource(model.IsHistory && !settingsOpen ? "Selected" : "Navigation");
+        if (settingsNavigation is not null) settingsNavigation.Background = (Brush)FindResource(settingsOpen ? "Selected" : "Navigation");
     }
 }
