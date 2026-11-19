@@ -41,7 +41,7 @@ public sealed partial class TaskService(string databasePath, TimeProvider? clock
         command.Transaction = transaction;
         command.CommandText = "PRAGMA user_version";
         var version = Convert.ToInt32(command.ExecuteScalar(), CultureInfo.InvariantCulture);
-        if (version > 4) throw new IOException("Эта база создана более новой версией Notifs.");
+        if (version > 5) throw new IOException("Эта база создана более новой версией Notifs.");
         command.CommandText = """
             CREATE TABLE IF NOT EXISTS tasks (
               id TEXT PRIMARY KEY, title TEXT NOT NULL CHECK(length(trim(title)) > 0),
@@ -65,7 +65,8 @@ public sealed partial class TaskService(string databasePath, TimeProvider? clock
             CREATE TABLE IF NOT EXISTS deleted_item (slot INTEGER PRIMARY KEY CHECK(slot=1), kind TEXT NOT NULL, data TEXT NOT NULL);
             CREATE TABLE IF NOT EXISTS personal_reminders (task_id TEXT PRIMARY KEY REFERENCES tasks(id) ON DELETE CASCADE, data TEXT NOT NULL);
             CREATE TABLE IF NOT EXISTS notification_settings (slot INTEGER PRIMARY KEY CHECK(slot=1), sound INTEGER NOT NULL, snooze_minutes INTEGER NOT NULL CHECK(snooze_minutes>0));
-            PRAGMA user_version = 4;
+            CREATE TABLE IF NOT EXISTS signal_reminders (id TEXT PRIMARY KEY, data TEXT NOT NULL);
+            PRAGMA user_version = 5;
             """;
         command.ExecuteNonQuery();
         transaction.Commit();

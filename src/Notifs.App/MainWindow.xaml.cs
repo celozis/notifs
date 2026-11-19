@@ -15,6 +15,10 @@ public partial class MainWindow : Window
     public RelayCommand BackToListCommand { get; }
     public RelayCommand CancelEditorCommand { get; }
     public RelayCommand SettingsCommand { get; }
+    public AsyncCommand RemindersCommand { get; }
+    public RelayCommand RestoreDeletedCommand { get; }
+    private RemindersViewModel? reminders;
+    private Button? remindersNavigation;
     private readonly MainViewModel model;
     private EditorViewModel? editor;
     private readonly Dictionary<Guid, EditorViewModel> pendingEdits = [];
@@ -43,18 +47,26 @@ public partial class MainWindow : Window
             BrowseView.Visibility = Visibility.Collapsed;
             AdaptLayout();
         }, CanNavigate);
+        RemindersCommand = new(OpenRemindersAsync, CanNavigate);
+        RestoreDeletedCommand = new(() => model.RestoreDeletedCommand.Execute(null),
+            () => CanNavigate() && model.RestoreDeletedCommand.CanExecute(null));
         InitializeComponent();
         DataContext = model;
         AddNavigation("Новая задача", "M9,1 V17 M1,9 H17", NewCommand, primary: true);
         activeNavigation = AddNavigation("Мои задачи", "M1,3 L3,5 L6,1 M9,3 H17 M1,12 L3,14 L6,10 M9,12 H17", new AsyncCommand(() => NavigateAsync(false), CanNavigate));
         AddNavigation("В процессе", "M4,1 L16,9 L4,17 Z", null);
         AddNavigation("Календарь", "M2,3 H16 V17 H2 Z M5,0 V6 M13,0 V6 M2,8 H16 M6,11 H7 M11,11 H12", null);
-        AddNavigation("Напоминания", "M3,13 H15 L13,10 V6 A4,4 0 0 0 5,6 V10 Z M7,16 Q9,19 11,16", null);
+        remindersNavigation = AddNavigation("Напоминания", "M3,13 H15 L13,10 V6 A4,4 0 0 0 5,6 V10 Z M7,16 Q9,19 11,16", RemindersCommand);
         historyNavigation = AddNavigation("История", "M2,2 V7 H7 M2,7 A7,7 0 1 1 2,13 M9,4 V10 L13,12", new AsyncCommand(() => NavigateAsync(true), CanNavigate));
         settingsNavigation = AddNavigation("Настройки", "M1,4 H17 M1,9 H17 M1,14 H17 M5,1 V7 M12,6 V12 M7,11 V17", SettingsCommand, bottom: true);
         InputBindings.Add(new KeyBinding(NewCommand, Key.N, ModifierKeys.Control));
         InputBindings.Add(new KeyBinding(new RelayCommand(() => editor?.SaveCommand.Execute(null), () => CanNavigate() && editor?.SaveCommand.CanExecute(null) == true), Key.S, ModifierKeys.Control));
-        InputBindings.Add(new KeyBinding(new RelayCommand(() => { if (DeleteOverlay.IsVisible) CancelDeleteCommand.Execute(null); else if (CancelEditorCommand.CanExecute(null)) CancelEditorCommand.Execute(null); }), Key.Escape, ModifierKeys.None));
+        InputBindings.Add(new KeyBinding(new RelayCommand(() => { if (DeleteOverlay.IsVisible) CancelDeleteCommand.Execute(null); else if (RemindersHost.IsVisible && reminders?.CancelCommand.CanExecute(null) == true) reminders.CancelCommand.Execute(null); else if (CancelEditorCommand.CanExecute(null)) CancelEditorCommand.Execute(null); }), Key.Escape, ModifierKeys.None));
+        model.DeletedRestored += async key =>
+        {
+            if (key.Type == "signal") await OpenRemindersAsync();
+            else if (RemindersHost.IsVisible) CloseEditor();
+        };
         Loaded += async (_, _) => await model.LoadAsync();
         timeRefresh.Tick += (_, _) => { if (!model.IsBusy) model.RefreshTime(); };
         Loaded += (_, _) => timeRefresh.Start();
@@ -78,7 +90,27 @@ public partial class MainWindow : Window
         AdaptLayout();
     }
 
-    private bool CanNavigate() => !model.IsBusy && editor?.IsBusy != true && DeleteOverlay?.IsVisible != true && (SettingsHost?.Content as SettingsView)?.DataContext is not SettingsViewModel { IsBusy: true };
+    private bool CanNavigate() => !model.IsBusy && editor?.IsBusy != true && reminders?.IsBusy != true && DeleteOverlay?.IsVisible != true && (SettingsHost?.Content as SettingsView)?.DataContext is not SettingsViewModel { IsBusy: true };
+    public async Task OpenRemindersAsync()
+    {
+        if (editor?.PersistDraft() == false) return;
+        CloseEditor();
+        reminders = new(model.Service);
+        reminders.DeleteRequested += RequestSignalDeletion;
+        reminders.ChangedStorage += async () => await model.LoadAsync();
+        RemindersHost.Content = new RemindersView(reminders);
+        RemindersHost.Visibility = Visibility.Visible;
+        BrowseView.Visibility = Visibility.Collapsed;
+        await reminders.LoadAsync();
+        AdaptLayout();
+    }
+    public async Task OpenSignalAsync()
+    {
+        if (!CanNavigate()) throw new System.IO.IOException("Завершите текущее действие и повторите открытие.");
+        await OpenRemindersAsync();
+        if (WindowState == WindowState.Minimized) WindowState = WindowState.Normal;
+        Show(); Activate();
+    }
     public async Task OpenTaskAsync(Guid id)
     {
         if (!CanNavigate() || editor?.PersistDraft() == false || DeleteOverlay.IsVisible) throw new System.IO.IOException("Завершите текущее действие и повторите открытие.");
@@ -119,6 +151,7 @@ public partial class MainWindow : Window
         if (editor?.IsBusy == true) return;
         if (editor?.PersistDraft() == false) return;
         SettingsHost.Visibility = Visibility.Collapsed;
+        RemindersHost.Visibility = Visibility.Collapsed;
         var originalId = edit ? model.Selected?.Item.Id : null;
         editor = originalId is { } id && pendingEdits.TryGetValue(id, out var pending) ? pending : !edit && pendingNew is not null ? pendingNew : model.CreateEditor(edit);
         if (originalId is { } key) pendingEdits[key] = editor; else pendingNew = editor;
@@ -156,6 +189,7 @@ public partial class MainWindow : Window
         EditorHost.Content = null;
         EditorHost.Visibility = Visibility.Collapsed;
         SettingsHost.Visibility = Visibility.Collapsed;
+        RemindersHost.Visibility = Visibility.Collapsed;
         BrowseView.Visibility = Visibility.Visible;
         StatusNote.SetBinding(TextBlock.TextProperty, new System.Windows.Data.Binding(nameof(model.Status)));
         AdaptLayout();
@@ -208,8 +242,10 @@ public partial class MainWindow : Window
         DetailPane.Visibility = stacked && (!showingDetails || !model.HasSelection) ? Visibility.Collapsed : Visibility.Visible;
         FilterBar.Visibility = model.IsHistory ? Visibility.Collapsed : Visibility.Visible;
         var settingsOpen = SettingsHost.IsVisible;
-        if (activeNavigation is not null) activeNavigation.Background = (Brush)FindResource(model.IsHistory || settingsOpen ? "Navigation" : "Selected");
-        if (historyNavigation is not null) historyNavigation.Background = (Brush)FindResource(model.IsHistory && !settingsOpen ? "Selected" : "Navigation");
+        var remindersOpen = RemindersHost.IsVisible;
+        if (activeNavigation is not null) activeNavigation.Background = (Brush)FindResource(model.IsHistory || settingsOpen || remindersOpen ? "Navigation" : "Selected");
+        if (historyNavigation is not null) historyNavigation.Background = (Brush)FindResource(model.IsHistory && !settingsOpen && !remindersOpen ? "Selected" : "Navigation");
         if (settingsNavigation is not null) settingsNavigation.Background = (Brush)FindResource(settingsOpen ? "Selected" : "Navigation");
+        if (remindersNavigation is not null) remindersNavigation.Background = (Brush)FindResource(remindersOpen ? "Selected" : "Navigation");
     }
 }

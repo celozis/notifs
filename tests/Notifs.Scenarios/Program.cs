@@ -26,6 +26,8 @@ internal static class Program
         {
             DraftScenarios.Run(directory);
             if (args.Contains("--drafts")) return 0;
+            SignalScenarios.Run(directory);
+            if (args.Contains("--signals")) return 0;
             NotificationScenarios.Run(directory);
             if (args.Contains("--notifications")) return 0;
             FieldScenarios.Run(directory);
@@ -92,7 +94,7 @@ internal static class Program
             editor.SaveCommand.Execute(null); // Invalid title is synchronous, no dispatcher pump needed.
             Check(editor.HasError && editor.Description == markdown && reopened.ListAll().Count == 2, "invalid UI submission retains Markdown and creates nothing");
             Console.WriteLine("All application and rendering checks passed.");
-            return UiScenario.Run(app, Path.Combine(directory, "ui.db"), args.Contains("--fields-ui"), args.Contains("--drafts-ui"), args.Contains("--notifications-ui"));
+            return UiScenario.Run(app, Path.Combine(directory, "ui.db"), args.Contains("--fields-ui"), args.Contains("--drafts-ui"), args.Contains("--notifications-ui"), args.Contains("--signals-ui"));
         }
         catch (Exception ex) { Console.Error.WriteLine(ex); return 1; }
         finally
