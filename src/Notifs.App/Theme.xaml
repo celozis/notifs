@@ -150,9 +150,12 @@
     <Setter Property="HorizontalContentAlignment" Value="Stretch" />
     <Setter Property="FocusVisualStyle" Value="{StaticResource FocusOutline}" />
     <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ListBoxItem">
-      <Border x:Name="Card" Padding="{TemplateBinding Padding}" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="12">
-        <Grid><Border x:Name="SelectionBar" Background="{DynamicResource Primary}" Width="3" HorizontalAlignment="Left" Margin="-16,-12,0,-12" Visibility="Collapsed" /><ContentPresenter /></Grid>
-      </Border>
+      <Grid>
+        <Border x:Name="Card" Padding="{TemplateBinding Padding}" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="12">
+          <ContentPresenter />
+        </Border>
+        <Border x:Name="SelectionBar" Background="{DynamicResource Primary}" Width="2" CornerRadius="1" HorizontalAlignment="Left" Margin="1,12,0,12" IsHitTestVisible="False" Visibility="Collapsed" />
+      </Grid>
       <ControlTemplate.Triggers>
         <EventTrigger RoutedEvent="PreviewMouseLeftButtonDown"><BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetName="Card" Storyboard.TargetProperty="Opacity" To="0.78" Duration="0:0:0"/></Storyboard></BeginStoryboard></EventTrigger>
         <EventTrigger RoutedEvent="PreviewMouseLeftButtonUp"><BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetName="Card" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0"/></Storyboard></BeginStoryboard></EventTrigger>

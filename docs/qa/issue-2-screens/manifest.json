@@ -93,6 +93,13 @@
       "pixelHeight": 811,
       "dpi": 96,
       "sha256": "57de985d115dc159252671917248140fe14da251ed5529b091dda087887ce4ec"
+    },
+    {
+      "file": "card-accent-fixed.png",
+      "pixelWidth": 1010,
+      "pixelHeight": 1060,
+      "dpi": 96,
+      "sha256": "b9ab9debea468b1447d036b562f5e96c4addfef4b100a90f1a11440a37e73c56"
     }
   ]
 }
