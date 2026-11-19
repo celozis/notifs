@@ -1,0 +1,8 @@
+# Stable bytes for the versioned visual reference and its SHA-256 manifest.
+prototypes/ui-concepts/** text eol=lf
+prototypes/ui-concepts/notifs-workspace-prototype.html -text
+prototypes/ui-concepts/notifs-design-concepts.html -text
+design-system/notifs/tokens.json text eol=lf
+design-system/notifs/reference/*.json text eol=lf
+design-system/notifs/reference/screens/*.json text eol=lf
+design-system/notifs/reference/screens/*.png binary

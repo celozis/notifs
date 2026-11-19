@@ -1,0 +1,310 @@
+<!-- Throwaway Notifs workspace, 2026-11-18. Graphite/amber + split view. All data and time are in memory. -->
+<div id="notifs-next">
+  <div class="nx-app" aria-label="Notifs: графит и янтарь">
+    <div class="nx-window"><span>notifs / личное пространство</span><span class="nx-window-icons" aria-hidden="true"><i data-lucide="minus"></i><i data-lucide="square"></i><i data-lucide="x"></i></span></div>
+    <div class="nx-shell"><aside class="nx-sidebar"></aside><main class="nx-main"></main></div>
+    <aside class="nx-checkin" aria-label="Вопрос о выполнении задачи" hidden></aside>
+    <dialog class="nx-dialog" aria-labelledby="nx-dialog-title"></dialog>
+    <dialog class="nx-dialog nx-delete-dialog" aria-labelledby="nx-delete-title" aria-describedby="nx-delete-description"></dialog>
+  </div>
+  <div class="viz-row" style="margin-top:12px"><button type="button" class="btn" data-demo="skip">Промотать 15 минут</button><button type="button" class="btn" data-demo="advance" disabled>Дойти до напоминания после оценки</button></div>
+</div>
+<style>
+#notifs-next{width:100%;min-width:0}
+#notifs-next [hidden]{display:none!important}
+#notifs-next .nx-app{--nx-bg:#20211f;--nx-rail:#181a17;--nx-panel:#292c27;--nx-raised:#33372f;--nx-hover:#393c33;--nx-ink:#f1f0e6;--nx-muted:#bdc0b1;--nx-line:#505646;--nx-accent:#e5b666;--nx-on:#282014;--nx-soft:#40392b;--nx-selected:#38382b;--nx-error:#ffb5ae;--nx-scrim:#000000b8;--nx-s:#6a2c35;--nx-s-ink:#ffd4d6;--nx-a:#65451f;--nx-a-ink:#ffdb9e;--nx-b:#5d5429;--nx-b-ink:#f4e6ac;--nx-c:#49582e;--nx-c-ink:#e3edc0;--nx-d:#2e533d;--nx-d-ink:#d0efd9;--nx-radius:12px;background:var(--nx-bg);color:var(--nx-ink);font:16px/1.5 "Segoe UI",Arial,sans-serif;border:1px solid var(--nx-line);border-radius:14px;overflow:hidden;position:relative;color-scheme:dark;isolation:isolate}
+#notifs-next .nx-app *{box-sizing:border-box;font-family:inherit}
+#notifs-next .nx-app :where(h1,h2,h3,p){margin:0;color:inherit;font-family:inherit;font-style:normal}
+#notifs-next .nx-app h1{font-size:29px;line-height:1.22;letter-spacing:-.7px;font-weight:600}
+#notifs-next .nx-app h2{font-size:22px;line-height:1.35;font-weight:600;letter-spacing:-.3px}
+#notifs-next .nx-app h3{font-size:16px;font-weight:600;line-height:1.5}
+#notifs-next .nx-app :where(button,input,textarea,select){font:inherit;color:inherit;min-width:0}
+#notifs-next .nx-app :where(button){cursor:pointer;background:none;border:0;transition:background .15s ease,border-color .15s ease,box-shadow .15s ease;text-align:left}
+#notifs-next .nx-app :where(button):focus-visible,#notifs-next .nx-app :where(input,textarea,select):focus-visible{outline:2px solid var(--nx-accent);outline-offset:3px}
+#notifs-next .nx-app :where(button):disabled{opacity:.45;cursor:default}
+#notifs-next .nx-app :where(button):active{box-shadow:inset 0 0 0 2px var(--nx-accent)}
+#notifs-next .nx-app :where(h1,h2,h3,p,span,button){overflow-wrap:anywhere}
+#notifs-next .nx-app svg{width:18px;height:18px;flex-shrink:0}
+#notifs-next .nx-window{height:36px;background:var(--nx-rail);border-bottom:1px solid var(--nx-line);display:flex;align-items:center;justify-content:space-between;padding:0 18px;color:var(--nx-muted);font-size:12px;letter-spacing:.3px}
+#notifs-next .nx-window-icons{display:flex;gap:24px}
+#notifs-next .nx-window-icons svg{width:12px;height:12px}
+#notifs-next .nx-shell{display:grid;grid-template-columns:178px minmax(0,1fr);min-height:930px}
+#notifs-next .nx-sidebar{display:flex;flex-direction:column;padding:28px 13px 20px;background:var(--nx-rail);border-right:1px solid var(--nx-line);gap:28px;min-width:0}
+#notifs-next .nx-brand{display:flex;align-items:center;gap:10px;font-size:25px;font-weight:650;letter-spacing:-.8px;padding:0 8px}
+#notifs-next .nx-logo{display:grid;place-items:center;width:30px;height:34px;background:var(--nx-accent);color:var(--nx-on);border-radius:9px}
+#notifs-next .nx-tagline{font-size:12px;color:var(--nx-muted);padding:7px 8px 0}
+#notifs-next .nx-nav{display:grid;gap:6px}
+#notifs-next .nx-navbutton{display:flex;align-items:center;gap:9px;min-height:46px;padding:10px 11px;font-size:13px;border-radius:8px;white-space:nowrap}
+#notifs-next .nx-navbutton:hover{background:var(--nx-hover)}
+#notifs-next .nx-navbutton[aria-current="page"]{background:var(--nx-soft);color:var(--nx-accent);box-shadow:inset 3px 0 var(--nx-accent);font-weight:600}
+#notifs-next .nx-navbutton.nx-new{background:var(--nx-accent);color:var(--nx-on);font-weight:600;margin-bottom:14px;box-shadow:none}
+#notifs-next .nx-new:hover{background:#f0c57f}
+#notifs-next .nx-badgecount{margin-left:auto;min-width:19px;text-align:center;font-size:11px}
+#notifs-next .nx-sidebarbottom{margin-top:auto;display:grid;gap:16px}
+#notifs-next .nx-profile{padding:18px 7px 0;border-top:1px solid var(--nx-line);display:flex;align-items:center;gap:9px;font-size:12px}
+#notifs-next .nx-avatar{display:grid;place-items:center;background:var(--nx-soft);color:var(--nx-accent);border-radius:50%;width:31px;height:31px;flex:none}
+#notifs-next .nx-muted{color:var(--nx-muted)}
+#notifs-next .nx-small{font-size:12px;line-height:1.6}
+#notifs-next .nx-main{padding:30px 25px 22px;min-width:0;display:flex;flex-direction:column}
+#notifs-next .nx-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:25px}
+#notifs-next .nx-overline{color:var(--nx-muted);font-size:11px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px}
+#notifs-next .nx-subtitle{font-size:13px;color:var(--nx-muted);margin-top:9px!important}
+#notifs-next .nx-clock{display:flex;align-items:center;gap:7px;color:var(--nx-muted);border:1px solid var(--nx-line);border-radius:8px;padding:8px 10px;font-size:12px;white-space:nowrap}
+#notifs-next .nx-split{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:20px;align-items:start}
+#notifs-next .nx-sectionlabel{font-size:11px;letter-spacing:1px;color:var(--nx-muted);font-weight:600;display:flex;justify-content:space-between;gap:8px;margin-bottom:12px}
+#notifs-next .nx-queue{display:grid;gap:10px}
+#notifs-next .nx-task{position:relative;border:1px solid var(--nx-line);border-radius:var(--nx-radius);background:var(--nx-panel);transition:background .15s ease,border-color .15s ease,box-shadow .15s ease;min-width:0}
+#notifs-next .nx-task:hover,#notifs-next .nx-task:focus-within{background:var(--nx-hover);border-color:var(--nx-accent);box-shadow:inset 3px 0 var(--nx-accent)}
+#notifs-next .nx-task.nx-selected{background:var(--nx-selected);border-color:var(--nx-accent);box-shadow:inset 3px 0 var(--nx-accent)}
+#notifs-next .nx-cardhit{display:block;width:100%;min-height:104px;padding:14px 14px 14px 58px;border-radius:var(--nx-radius);text-align:left}
+#notifs-next .nx-tasktitle{font-size:15px;font-weight:550;line-height:1.5;display:block;margin-bottom:8px}
+#notifs-next .nx-completed .nx-tasktitle{text-decoration:line-through;text-decoration-thickness:1px;color:var(--nx-muted)}
+#notifs-next .nx-completed{background:var(--nx-bg)}
+#notifs-next .nx-check{position:absolute;top:19px;left:15px;z-index:1;display:grid;place-items:center;width:28px;height:28px;border:1.5px solid var(--nx-muted)!important;border-radius:50%;color:var(--nx-accent)}
+#notifs-next .nx-check[aria-pressed="true"]{background:var(--nx-accent);border-color:var(--nx-accent)!important;color:var(--nx-on)}
+#notifs-next .nx-check:hover{background:var(--nx-soft)}
+#notifs-next .nx-rank{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:6px;font-size:12px;font-weight:700;line-height:1;flex:none;letter-spacing:0}
+#notifs-next .nx-rank[data-rank="S"]{background:var(--nx-s);color:var(--nx-s-ink)}
+#notifs-next .nx-rank[data-rank="A"]{background:var(--nx-a);color:var(--nx-a-ink)}
+#notifs-next .nx-rank[data-rank="B"]{background:var(--nx-b);color:var(--nx-b-ink)}
+#notifs-next .nx-rank[data-rank="C"]{background:var(--nx-c);color:var(--nx-c-ink)}
+#notifs-next .nx-rank[data-rank="D"]{background:var(--nx-d);color:var(--nx-d-ink)}
+#notifs-next .nx-meta{display:flex;flex-wrap:wrap;align-items:center;gap:7px;color:var(--nx-muted);font-size:11px;line-height:1.5}
+#notifs-next .nx-taskstate{display:flex;gap:6px;align-items:center;color:var(--nx-accent);font-size:11px;margin-top:10px}
+#notifs-next .nx-taskstate svg{width:13px;height:13px}
+#notifs-next .nx-filters{display:flex;flex-wrap:wrap;gap:4px;margin-top:16px;padding:5px;border:1px solid var(--nx-line);border-radius:10px}
+#notifs-next .nx-filter{min-height:40px;flex:1;padding:8px 7px;border-radius:6px;text-align:center;font-size:11px;white-space:nowrap}
+#notifs-next .nx-filter:hover{background:var(--nx-hover)}
+#notifs-next .nx-filter[aria-pressed="true"]{background:var(--nx-accent);color:var(--nx-on);font-weight:600}
+#notifs-next .nx-detail{background:var(--nx-panel);border:1px solid var(--nx-line);border-radius:var(--nx-radius);padding:22px;min-width:0}
+#notifs-next .nx-detail h2{margin:16px 0 10px}
+#notifs-next .nx-detail.nx-completed h2{text-decoration:line-through;color:var(--nx-muted)}
+#notifs-next .nx-detailtag{display:flex;align-items:center;justify-content:space-between;gap:12px;color:var(--nx-muted);font-size:11px;letter-spacing:.7px}
+#notifs-next .nx-facts{display:grid;grid-template-columns:1fr 1fr;gap:17px 12px;padding:18px 0;margin:20px 0;border-block:1px solid var(--nx-line)}
+#notifs-next .nx-facts dt{font-size:11px;color:var(--nx-muted);margin-bottom:3px}
+#notifs-next .nx-facts dd{margin:0;font-size:13px;font-weight:550}
+#notifs-next .nx-description{font-size:13px;line-height:1.8;color:var(--nx-muted);overflow-wrap:anywhere}
+#notifs-next .nx-description h3{color:var(--nx-ink);margin-bottom:10px}
+#notifs-next .nx-description p{margin-bottom:7px}
+#notifs-next .nx-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:22px}
+#notifs-next .nx-button{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:44px;padding:10px 13px;border:1px solid var(--nx-line)!important;border-radius:8px;font-size:12px;font-weight:550}
+#notifs-next .nx-button:hover{background:var(--nx-hover)}
+#notifs-next .nx-button.nx-primary{background:var(--nx-accent);color:var(--nx-on);border-color:var(--nx-accent)!important}
+#notifs-next .nx-button.nx-delete{margin-left:auto;color:var(--nx-error);border-color:var(--nx-error)!important}
+#notifs-next .nx-button.nx-delete:hover{background:var(--nx-s)}
+#notifs-next .nx-button.nx-danger{background:var(--nx-s);color:var(--nx-s-ink);border-color:var(--nx-s-ink)!important}
+#notifs-next .nx-delete-dialog{max-width:460px}
+#notifs-next .nx-delete-dialog h2{margin-bottom:14px}
+#notifs-next .nx-delete-dialog p{font-size:14px;color:var(--nx-muted);line-height:1.7}
+#notifs-next .nx-delete-dialog .nx-actions{justify-content:flex-end}
+#notifs-next .nx-status .nx-button{margin-left:12px}
+#notifs-next .nx-primary:hover{background:#f0c57f}
+#notifs-next .nx-button svg{width:15px;height:15px}
+#notifs-next .nx-session{margin:20px 0 0;padding:15px;background:var(--nx-soft);border-left:3px solid var(--nx-accent);border-radius:6px;color:var(--nx-muted);font-size:12px}
+#notifs-next .nx-session strong{display:block;color:var(--nx-accent);font-size:16px;font-weight:550;margin:4px 0}
+#notifs-next .nx-empty{padding:42px 18px;text-align:center;color:var(--nx-muted);font-size:13px;border:1px dashed var(--nx-line);border-radius:var(--nx-radius)}
+#notifs-next .nx-empty h2{font-size:20px;color:var(--nx-ink);margin-bottom:12px}
+#notifs-next .nx-status{min-height:20px;color:var(--nx-accent);font-size:12px;padding-top:18px}
+#notifs-next .nx-footnote{margin-top:auto;padding-top:24px;font-size:11px;color:var(--nx-muted);display:flex;align-items:center;gap:7px}
+#notifs-next .nx-footnote svg{width:14px;height:14px}
+#notifs-next .nx-weekhead{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:14px}
+#notifs-next .nx-weekcontrols{display:flex;gap:6px}
+#notifs-next .nx-iconbutton{display:grid;place-items:center;width:40px;height:40px;border:1px solid var(--nx-line)!important;border-radius:7px}
+#notifs-next .nx-iconbutton:hover{background:var(--nx-hover)}
+#notifs-next .nx-week{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:7px;margin-bottom:24px}
+#notifs-next .nx-weekday{min-height:76px;text-align:center;padding:9px 2px;border:1px solid var(--nx-line)!important;border-radius:10px;background:var(--nx-panel);font-size:10px;color:var(--nx-muted)}
+#notifs-next .nx-weekday strong{display:block;color:var(--nx-ink);font-size:21px;font-weight:500;margin-top:4px}
+#notifs-next .nx-weekday[aria-pressed="true"]{background:var(--nx-accent);border-color:var(--nx-accent)!important;color:var(--nx-on)}
+#notifs-next .nx-weekday[aria-pressed="true"] strong{color:var(--nx-on)}
+#notifs-next .nx-periodlabel{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px;font-size:13px;color:var(--nx-muted)}
+#notifs-next .nx-monthhead{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px}
+#notifs-next .nx-monthtitle{text-transform:capitalize}
+#notifs-next .nx-rangefields{display:flex;align-items:end;gap:10px;flex-wrap:wrap;margin:18px 0 16px}
+#notifs-next .nx-rangefields label{display:grid;gap:5px;font-size:11px;color:var(--nx-muted);flex:1;min-width:130px}
+#notifs-next .nx-rangefields input{border:1px solid var(--nx-muted);border-radius:7px;background:var(--nx-panel);padding:9px;min-height:44px;font-size:12px;width:100%}
+#notifs-next .nx-weeknames{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));color:var(--nx-muted);font-size:11px;letter-spacing:.5px;padding:6px 0 10px;text-align:center}
+#notifs-next .nx-monthgrid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px;user-select:none;touch-action:pan-y}
+#notifs-next .nx-day{min-height:118px;background:var(--nx-panel);border:1px solid var(--nx-line)!important;border-radius:8px;display:flex;flex-direction:column;align-items:stretch;padding:8px 6px;min-width:0}
+#notifs-next .nx-day:hover{background:var(--nx-hover);border-color:var(--nx-accent)!important}
+#notifs-next .nx-day.nx-outside .nx-daynumber{color:var(--nx-muted)}
+#notifs-next .nx-daynumber{display:grid;place-items:center;width:25px;height:25px;border-radius:50%;font-size:12px;align-self:flex-end;margin-bottom:8px}
+#notifs-next .nx-day.nx-today .nx-daynumber{background:var(--nx-accent);color:var(--nx-on)}
+#notifs-next .nx-day.nx-inrange{background:var(--nx-soft);border-color:var(--nx-accent)!important;box-shadow:inset 0 0 0 1px var(--nx-accent)}
+#notifs-next .nx-daytask{display:flex;align-items:center;gap:4px;font-size:11px;line-height:1.5;min-width:0;margin-bottom:4px}
+#notifs-next .nx-daytask .nx-rank{width:18px;height:19px;font-size:10px;border-radius:4px}
+#notifs-next .nx-daytasktitle{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+#notifs-next .nx-daytask.nx-done .nx-daytasktitle{text-decoration:line-through;color:var(--nx-muted)}
+#notifs-next .nx-more{font-size:10px;color:var(--nx-muted);margin-top:2px}
+#notifs-next .nx-draglabel{min-height:24px;font-size:12px;color:var(--nx-accent);margin-top:13px}
+#notifs-next .nx-reasons{display:flex;gap:5px;flex-wrap:wrap;margin-top:9px;color:var(--nx-muted);font-size:10px}
+#notifs-next .nx-reason{border:1px solid var(--nx-line);border-radius:4px;padding:2px 6px}
+#notifs-next .nx-dialog{position:fixed;inset:auto 0 auto 0;margin:0 auto;width:min(620px,calc(100% - 28px));max-height:650px;padding:26px;background:var(--nx-panel);color:var(--nx-ink);border:1px solid var(--nx-line);border-radius:16px;box-shadow:0 22px 80px #0008;overflow:auto;font:inherit}
+#notifs-next .nx-dialog::backdrop{background:var(--nx-scrim)}
+#notifs-next .nx-dialog[open]{display:flex;flex-direction:column}
+#notifs-next .nx-dialog>.nx-queue{min-height:0;overflow-y:auto;flex:1;padding:3px}
+#notifs-next .nx-dialog>.nx-actions,#notifs-next .nx-dialog>.nx-dialoghead{flex:none}
+#notifs-next .nx-dialoghead{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:22px}
+#notifs-next .nx-dialoghead h2{font-size:22px}
+#notifs-next .nx-dialog .nx-cardhit{min-height:105px}
+#notifs-next .nx-dialog .nx-actions{justify-content:flex-end}
+#notifs-next .nx-checkin{position:absolute;z-index:5;right:22px;bottom:22px;max-width:365px;width:calc(100% - 38px);background:var(--nx-raised);border:1px solid var(--nx-accent);border-radius:14px;box-shadow:0 16px 45px #0008;padding:21px;font:inherit}
+#notifs-next .nx-checkin h3{font-size:19px;margin:14px 0 8px}
+#notifs-next .nx-checkin p{font-size:13px;color:var(--nx-muted)}
+#notifs-next .nx-checkinhead{display:flex;justify-content:space-between;gap:12px;align-items:center;color:var(--nx-accent);font-size:11px;letter-spacing:1px}
+#notifs-next .nx-form{max-width:700px}
+#notifs-next .nx-field{display:grid;gap:8px;font-size:13px;font-weight:550;margin-bottom:20px}
+#notifs-next .nx-field :is(input,textarea,select){width:100%;background:var(--nx-panel);border:1px solid var(--nx-muted);border-radius:8px;padding:11px 12px;min-height:46px;font-size:15px;line-height:1.5}
+#notifs-next .nx-field textarea{min-height:170px;resize:vertical}
+#notifs-next .nx-formrow{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+#notifs-next .nx-formatbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+#notifs-next .nx-formatbar .nx-button{font-weight:500}
+#notifs-next .nx-formtabs{display:flex;gap:16px;border-bottom:1px solid var(--nx-line);margin-bottom:15px}
+#notifs-next .nx-formtab{padding:10px 2px;font-size:13px;min-height:44px;border-bottom:2px solid transparent!important}
+#notifs-next .nx-formtab[aria-pressed="true"]{border-bottom-color:var(--nx-accent)!important;color:var(--nx-accent)}
+#notifs-next .nx-preview{padding:20px;background:var(--nx-panel);border:1px solid var(--nx-line);border-radius:8px;min-height:170px;margin-bottom:20px}
+#notifs-next .nx-error{font-size:12px;color:var(--nx-error);font-weight:400}
+#notifs-next .nx-reminder{padding:20px;border:1px solid var(--nx-line);border-radius:var(--nx-radius);background:var(--nx-panel);margin-bottom:12px;display:flex;justify-content:space-between;gap:18px;align-items:center}
+#notifs-next .nx-reminder p{font-size:12px;color:var(--nx-muted);margin-top:6px}
+@media(max-width:850px){#notifs-next .nx-shell{grid-template-columns:156px minmax(0,1fr)}#notifs-next .nx-sidebar{padding-inline:9px}#notifs-next .nx-main{padding:26px 18px}#notifs-next .nx-navbutton{font-size:12px;gap:7px;padding-inline:9px}#notifs-next .nx-split{grid-template-columns:1fr}#notifs-next .nx-clock{display:none}#notifs-next .nx-day{min-height:98px;padding:6px 4px}#notifs-next .nx-daytasktitle{display:none}#notifs-next .nx-daytask{display:inline-flex;margin-right:3px}#notifs-next .nx-daytask .nx-rank{width:18px}#notifs-next .nx-week{gap:4px}}
+@media(max-width:550px){#notifs-next .nx-shell{grid-template-columns:1fr}#notifs-next .nx-sidebar{padding:20px 15px;border-right:0;border-bottom:1px solid var(--nx-line);gap:18px}#notifs-next .nx-nav{grid-template-columns:1fr 1fr}#notifs-next .nx-navbutton.nx-new{grid-column:1/-1;margin:0}#notifs-next .nx-tagline,#notifs-next .nx-profile{display:none}#notifs-next .nx-sidebarbottom{margin-top:0}#notifs-next .nx-sidebarbottom .nx-navbutton{min-height:44px}#notifs-next .nx-main{padding:24px 15px}#notifs-next .nx-app h1{font-size:26px}#notifs-next .nx-app h2{font-size:21px}#notifs-next .nx-formrow{grid-template-columns:1fr;gap:0}#notifs-next .nx-head{flex-wrap:wrap}#notifs-next .nx-weekhead{flex-wrap:wrap}#notifs-next .nx-weekday{min-height:62px;padding:7px 0;font-size:9px}#notifs-next .nx-weekday strong{font-size:18px}#notifs-next .nx-week{gap:4px}#notifs-next .nx-monthgrid{gap:3px}#notifs-next .nx-day{min-height:84px;padding:6px 2px}#notifs-next .nx-daynumber{font-size:11px;width:22px;height:22px;align-self:center}#notifs-next .nx-daytask{justify-content:center}#notifs-next .nx-more{font-size:9px;text-align:center}#notifs-next .nx-monthhead{flex-wrap:wrap}#notifs-next .nx-rangefields .nx-button{width:100%}#notifs-next .nx-dialog{padding:18px;max-height:560px}#notifs-next .nx-dialoghead{gap:8px}#notifs-next .nx-checkin{right:12px;bottom:16px}#notifs-next .nx-reminder{flex-wrap:wrap}}
+@media(pointer:coarse){#notifs-next .nx-check{width:36px;height:36px;left:12px;top:16px}#notifs-next .nx-cardhit{padding-left:60px}#notifs-next .nx-filter{min-height:44px}#notifs-next .nx-iconbutton{width:44px;height:44px}}
+@media(prefers-reduced-motion:reduce){#notifs-next .nx-app *{transition:none!important;animation:none!important}}
+</style>
+<script>
+(() => {
+ const root=document.getElementById('notifs-next'),app=root.querySelector('.nx-app'),main=root.querySelector('.nx-main'),sidebar=root.querySelector('.nx-sidebar'),dialog=root.querySelector('.nx-dialog'),checkin=root.querySelector('.nx-checkin');
+ const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+ const icon=n=>`<i data-lucide="${n}" aria-hidden="true"></i>`;
+ const dayMs=86400000;
+ const stamp=value=>Date.parse(value.length===10?value+'T12:00:00Z':value+'Z');
+ const key=value=>new Date(value).toISOString().slice(0,10);
+ const day=value=>key(typeof value==='string'?stamp(value):value);
+ const addDay=(d,n)=>key(stamp(d)+n*dayMs);
+ const format=(d,options)=>new Intl.DateTimeFormat('ru-RU',{timeZone:'UTC',...options}).format(new Date(typeof d==='string'?stamp(d):d));
+ const dateLabel=d=>format(d,{day:'numeric',month:'long'});
+ const timeLabel=d=>format(d,{hour:'2-digit',minute:'2-digit'});
+ const startWeek=d=>{const n=new Date(stamp(d)).getUTCDay();return addDay(d,-((n+6)%7));};
+ const duration=n=>{if(!n)return 'Без оценки';const h=Math.floor(n/60),m=n%60;return [h?h+' ч':'',m?m+' мин':''].filter(Boolean).join(' ');};
+ const initialNow=Date.UTC(2026,10,18,12),realStart=Date.now();
+ const tasks=[
+  {id:1,title:'Закончить практическую работу',rank:'S',created:'2026-11-16T15:00:00',deadline:'2026-11-18T20:00:00',estimate:420,description:'## Остался последний шаг\n\n- Проверить расчёты\n- Оформить выводы\n- Отправить преподавателю',done:false},
+  {id:2,title:'Отправить домашнюю работу',rank:'A',created:'2026-11-17T10:00:00',deadline:'2026-11-18T14:00:00',estimate:40,description:'Проверить вложения, прикрепить файл и отправить работу в личном кабинете.',done:false},
+  {id:3,title:'Пройти курс по C#',rank:'B',created:'2026-11-10T12:00:00',deadline:'2026-12-18T18:00:00',estimate:1200,description:'## Следующая тема\n\n- Асинхронность\n- Практическое задание',done:false},
+  {id:4,title:'Навести порядок на рабочем столе',rank:'C',created:'2026-11-14T12:00:00',deadline:'',estimate:4320,description:'Разобрать файлы и конспекты. Расчётный промежуток: с субботы 14 ноября по вторник 17 ноября.',done:false},
+  {id:5,title:'Помыть пол',rank:'D',created:'2026-11-18T08:00:00',deadline:'',estimate:45,description:'Прибраться в комнате, затем помыть пол на кухне.',done:false},
+  {id:6,title:'Записаться на следующую неделю',rank:'B',created:'2026-11-16T10:00:00',deadline:'2026-11-17T18:00:00',estimate:15,description:'Выбрать удобное время и добавить запись в календарь.',done:true},
+  {id:7,title:'Сдать отчёт по проекту',rank:'A',created:'2026-11-18T09:00:00',deadline:'2026-11-24T16:00:00',estimate:240,description:'Собрать результаты и отправить итоговый отчёт.',done:false}
+ ];
+ const state={page:'tasks',selected:1,filter:'all',sticky:new Set(),tasks,week:'2026-11-16',period:{from:'2026-11-18',to:'2026-11-18'},month:10,year:2026,range:{from:'2026-11-18',to:'2026-11-18'},anchor:null,keyboardRange:false,drag:null,notice:'',now:initialNow,offset:0,sessions:{},notification:null,edit:null,preview:false,error:false,draft:{title:'',description:'',date:'',time:'',estimate:'',rank:'B'}};
+ const getTask=id=>state.tasks.find(t=>t.id===Number(id));
+ const deleteDialog=root.querySelector('.nx-delete-dialog');
+ let pendingDeleteId=null,removedTask=null,nextTaskId=Math.max(...tasks.map(t=>t.id))+1;
+ const rank=t=>`<span class="nx-rank" data-rank="${esc(t.rank)}" aria-label="Ранг ${esc(t.rank)}">${esc(t.rank)}</span>`;
+ const estimated=t=>!t.deadline&&t.estimate?stamp(t.created)+t.estimate*60000:null;
+ function reasons(t,p){const result=[];const has=v=>v&&day(v)>=p.from&&day(v)<=p.to;if(has(t.created))result.push('Создана');if(has(t.deadline))result.push('Дедлайн');if(has(estimated(t)))result.push('Расчётное завершение');const session=state.sessions[t.id];if(session?.due&&has(session.due))result.push('Оценка от начала');return result;}
+ function periodTasks(p){return state.tasks.filter(t=>reasons(t,p).length);}
+ function dueLabel(t){return t.deadline?(day(t.deadline)==='2026-11-18'?'Сегодня':dateLabel(t.deadline))+', '+timeLabel(t.deadline):'Без дедлайна';}
+ function age(t){const n=Math.max(0,Math.floor((state.now-stamp(t.created))/dayMs));return n===0?'Создана сегодня':n===1?'Создана вчера':'Создана '+n+' дн. назад';}
+ function markdown(text){const inline=line=>esc(line).replace(/\*\*\*([^\n]+?)\*\*\*/g,'<strong><em>$1</em></strong>').replace(/\*\*([^\n]+?)\*\*/g,'<strong>$1</strong>').replace(/(^|[^*])\*([^*\n]+)\*(?!\*)/g,'$1<em>$2</em>');return text.split('\n').map(line=>line.startsWith('## ')?'<h3>'+inline(line.slice(3))+'</h3>':line.startsWith('# ')?'<h3>'+inline(line.slice(2))+'</h3>':line.startsWith('- ')?'<div>• '+inline(line.slice(2))+'</div>':'<p>'+(inline(line)||'<br>')+'</p>').join('');}
+ function refreshIcons(){globalThis.lucide?.createIcons({attrs:{width:18,height:18,'stroke-width':1.7}});}
+ function spanLabel(p){return p.from===p.to?dateLabel(p.from):dateLabel(p.from)+' — '+dateLabel(p.to);}
+ function card(t,{period=null}={}){const session=state.sessions[t.id];return `<article class="nx-task ${state.selected===t.id?'nx-selected':''} ${t.done?'nx-completed':''}" data-task="${t.id}"><button type="button" class="nx-cardhit" data-action="select" data-id="${t.id}" aria-label="Открыть задачу: ${esc(t.title)}" aria-pressed="${state.selected===t.id}"><span class="nx-tasktitle">${esc(t.title)}</span><span class="nx-meta">${rank(t)}<span>${esc(dueLabel(t))}</span><span>·</span><span>${duration(t.estimate)}</span></span>${t.done?`<span class="nx-taskstate">${icon('check')}Выполнена</span>`:session?`<span class="nx-taskstate">${icon(session.pausedAt?'pause':'play')}${session.pausedAt?'На паузе · с '+timeLabel(session.pausedAt):'В процессе · с '+timeLabel(session.start)}</span>`:''}${period?`<span class="nx-reasons">${reasons(t,period).map(r=>'<span class="nx-reason">'+r+'</span>').join('')}</span>`:''}</button><button type="button" class="nx-check" data-action="complete" data-id="${t.id}" aria-label="${t.done?'Вернуть в работу':'Выполнить'}: ${esc(t.title)}" aria-pressed="${t.done}">${t.done?icon('check'):''}</button></article>`;}
+ function activeElapsed(s){return s.activeMs+(s.activeSince===null?0:Math.max(0,state.now-s.activeSince));}
+ function sessionText(id){const s=state.sessions[id];if(!s)return '';const remaining=s.pausedAt?s.remainingMs:s.due===null?null:s.due-state.now;if(remaining===null)return s.pausedAt?'На паузе · без оценки':'Без напоминания по времени';if(remaining<=0)return s.pausedAt?'На паузе · оценка уже прошла':'Время оценки прошло';return (s.pausedAt?'На паузе · осталось ':'До вопроса: ')+duration(Math.ceil(remaining/60000));}
+ function sessionPanel(t,s){return `<div class="nx-session">Начал ${dateLabel(s.start)}, ${timeLabel(s.start)}<strong data-session="${t.id}">${sessionText(t.id)}</strong>${s.pausedAt?'Пауза с '+dateLabel(s.pausedAt)+', '+timeLabel(s.pausedAt)+'. Отсчёт заморожен.':s.due?'Вопрос о результате в '+timeLabel(s.due):'Можно добавить оценку в редакторе.'}<p style="margin-top:8px">Активное время: <span data-active-time="${t.id}">${duration(Math.floor(activeElapsed(s)/60000))==='Без оценки'?'меньше минуты':duration(Math.floor(activeElapsed(s)/60000))}</span></p></div>`;}
+ function details(t){
+  if(!t)return `<div class="nx-empty"><h2>Выберите задачу</h2><p>Подробности, описание и действия появятся здесь.</p></div>`;
+  const s=state.sessions[t.id];
+  const sessionActions=!t.done?(s?`<button type="button" class="nx-button ${s.pausedAt?'nx-primary':''}" data-action="${s.pausedAt?'resume':'pause'}" data-id="${t.id}">${icon(s.pausedAt?'play':'pause')}${s.pausedAt?'Продолжить':'Сделать паузу'}</button><button type="button" class="nx-button" data-action="cancel-session" data-id="${t.id}" aria-label="Отменить начало занятия" data-tooltip="Отменить начало занятия. Задача останется в списке.">${icon('x')}Отменить</button>`:`<button type="button" class="nx-button nx-primary" data-action="start" data-id="${t.id}">${icon('play')}Сел делать</button>`):'';
+  return `<section class="nx-detail ${t.done?'nx-completed':''}"><div class="nx-detailtag"><span>${t.done?'ВЫПОЛНЕНА':s?.pausedAt?'НА ПАУЗЕ':s?'В ПРОЦЕССЕ':'ПОДРОБНОСТИ ЗАДАЧИ'}</span>${rank(t)}</div><h2>${esc(t.title)}</h2><p class="nx-small nx-muted">${age(t)}</p><dl class="nx-facts"><div><dt>Дедлайн</dt><dd>${esc(dueLabel(t))}</dd></div><div><dt>Полная оценка</dt><dd>${duration(t.estimate)}</dd></div><div><dt>Создание</dt><dd>${dateLabel(t.created)}, ${timeLabel(t.created)}</dd></div><div><dt>${t.deadline?'Запас времени':'Расчётное завершение'}</dt><dd>${t.deadline?duration(Math.max(0,Math.round((stamp(t.deadline)-state.now)/60000)-t.estimate)):estimated(t)?dateLabel(estimated(t))+', '+timeLabel(estimated(t)):'Не задано'}</dd></div></dl><div class="nx-description">${markdown(t.description)}</div>${s?sessionPanel(t,s):''}<div class="nx-actions">${sessionActions}<button type="button" class="nx-button ${s&&!s.pausedAt&&!t.done?'nx-primary':''}" data-action="complete" data-id="${t.id}">${icon(t.done?'rotate-ccw':'check')}${t.done?'В работу':'Готово'}</button><button type="button" class="nx-button" data-action="edit" data-id="${t.id}">${icon('pencil')}Изменить</button></div></section>`;
+ }
+ function baseItems(){if(state.page==='progress')return state.tasks.filter(t=>state.sessions[t.id]||state.sticky.has(t.id));if(state.page==='history')return state.tasks.filter(t=>t.done||state.sticky.has(t.id));if(state.page==='week')return periodTasks(state.period);return state.tasks;}
+ function filterItems(items){return items.filter(t=>state.filter==='all'||state.sticky.has(t.id)||(state.filter==='done'?t.done:!t.done));}
+ function filterBar(items){const options=[['all','Все',items.length],['open','Не сделаны',items.filter(t=>!t.done).length],['done','Сделаны',items.filter(t=>t.done).length]];return `<div class="nx-filters" role="group" aria-label="Показывать задачи">${options.map(([k,label,n])=>`<button type="button" class="nx-filter" data-action="filter" data-filter="${k}" aria-pressed="${state.filter===k}">${label} ${n}</button>`).join('')}</div>`;}
+ function header(title,subtitle){return `<header class="nx-head"><div><div class="nx-overline">Среда, 18 ноября</div><h1>${title}</h1><p class="nx-subtitle">${subtitle}</p></div><span class="nx-clock">${icon('clock-3')}<span data-clock>${timeLabel(state.now)}</span></span></header>`;}
+ function weekStrip(){return `<div class="nx-weekhead"><div class="nx-weekcontrols"><button type="button" class="nx-iconbutton" data-action="week-prev" aria-label="Предыдущая неделя">${icon('chevron-left')}</button><button type="button" class="nx-iconbutton" data-action="week-next" aria-label="Следующая неделя">${icon('chevron-right')}</button></div><span class="nx-small nx-muted">${spanLabel({from:state.week,to:addDay(state.week,6)})}</span><button type="button" class="nx-button" data-action="month">${icon('calendar-days')}Открыть календарь</button></div><div class="nx-week">${['ПН','ВТ','СР','ЧТ','ПТ','СБ','ВС'].map((name,i)=>{const d=addDay(state.week,i);return `<button type="button" class="nx-weekday" data-action="week-day" data-date="${d}" aria-pressed="${d>=state.period.from&&d<=state.period.to}" aria-label="${dateLabel(d)}">${name}<strong>${Number(d.slice(-2))}</strong></button>`;}).join('')}</div><div class="nx-periodlabel"><span>${spanLabel(state.period)}</span><button type="button" class="nx-button" data-action="whole-week">${icon('arrow-right')}Вся неделя</button></div>`;}
+ function listView(){const base=baseItems(),items=filterItems(base);let t=items.find(x=>x.id===state.selected);if(!t){t=items[0];state.selected=t?.id??null;}const head=state.page==='progress'?header('В процессе','Когда начал и когда пора проверить результат.'):state.page==='history'?header('История','Завершённые дела и возможность вернуться к ним.'):state.page==='week'?header('Календарь','Неделя рядом с задачами. Полный месяц — в один клик.'):header('Мои задачи','Список слева. Внимание — на одном деле.');return head+(state.page==='week'?weekStrip():'')+`<div class="nx-split"><section><div class="nx-sectionlabel"><span>${state.page==='progress'?'НАЧАТЫЕ ЗАДАЧИ':'ЗАДАЧИ'}</span><span>${items.length}</span></div><div class="nx-queue">${items.map(t=>card(t,{period:state.page==='week'?state.period:null})).join('')||`<div class="nx-empty"><h2>${state.page==='progress'?'Пока ничего не начато':'Здесь пока пусто'}</h2><p>${state.page==='progress'?'Откройте задачу и нажмите «Сел делать».':'Выберите другой фильтр или добавьте задачу.'}</p></div>`}</div>${filterBar(base)}</section><div>${details(t)}</div></div>`;}
+ function monthGrid(){const first=key(Date.UTC(state.year,state.month,1,12)),begin=startWeek(first);const days=Array.from({length:42},(_,i)=>addDay(begin,i));return `<div class="nx-weeknames">${['ПН','ВТ','СР','ЧТ','ПТ','СБ','ВС'].map(n=>'<span>'+n+'</span>').join('')}</div><div class="nx-monthgrid" role="group" aria-label="Дни месяца, доступно выделение периода">${days.map(d=>{const items=periodTasks({from:d,to:d});return `<button type="button" class="nx-day ${Number(d.slice(5,7))-1!==state.month?'nx-outside':''} ${d==='2026-11-18'?'nx-today':''} ${d>=state.range.from&&d<=state.range.to?'nx-inrange':''}" data-action="month-day" data-date="${d}" aria-pressed="${d>=state.range.from&&d<=state.range.to}" aria-label="${dateLabel(d)}. Задач: ${items.length}${items.length?'. '+items.map(t=>t.rank+': '+t.title).join('; '):''}"><span class="nx-daynumber">${Number(d.slice(-2))}</span>${items.slice(0,3).map(t=>`<span class="nx-daytask ${t.done?'nx-done':''}" data-tooltip="${esc(t.rank+' — '+t.title)}">${rank(t)}<span class="nx-daytasktitle">${esc(t.title)}</span></span>`).join('')}${items.length>3?'<span class="nx-more">Ещё '+(items.length-3)+'</span>':''}</button>`;}).join('')}</div>`;}
+ function monthView(){return header('Календарь целиком','Выберите день или протяните выделение через нужные даты.')+`<div class="nx-monthhead"><div class="nx-weekcontrols"><button type="button" class="nx-iconbutton" data-action="month-prev" aria-label="Предыдущий месяц">${icon('chevron-left')}</button><button type="button" class="nx-iconbutton" data-action="month-next" aria-label="Следующий месяц">${icon('chevron-right')}</button></div><h2 class="nx-monthtitle">${format(Date.UTC(state.year,state.month,1),{month:'long',year:'numeric'})}</h2><button type="button" class="nx-button" data-action="back-week">${icon('arrow-left')}К неделе</button></div><div class="nx-rangefields"><label>Начало периода<input type="date" name="range-from" value="${state.range.from}" aria-label="Начало выбранного периода"></label><label>Конец периода<input type="date" name="range-to" value="${state.range.to}" aria-label="Конец выбранного периода"></label><button type="button" class="nx-button" data-action="range-apply">Показать период</button></div>${monthGrid()}<p class="nx-draglabel" data-range-label>${spanLabel(state.range)}</p>`;}
+ function editorView(){const d=state.draft;return header(state.edit?'Изменить задачу':'Новое дело','Все детали остаются в этом окне.')+`<div class="nx-form"><label class="nx-field">Название задачи *<input name="title" value="${esc(d.title)}" aria-required="true" ${state.error?'aria-invalid="true" aria-describedby="nx-form-error"':''} placeholder="Что нужно сделать?">${state.error?'<span class="nx-error" id="nx-form-error" role="alert">Введите название. Остальной текст останется на месте.</span>':''}</label><div class="nx-formrow"><label class="nx-field">Дедлайн<input name="date" type="date" value="${d.date}"></label><label class="nx-field">Время дедлайна<input name="time" type="time" value="${d.time}"></label></div><div class="nx-formrow"><label class="nx-field">Оценка, минуты<input name="estimate" type="number" min="1" value="${esc(d.estimate)}" placeholder="Например, 90"></label><label class="nx-field">Ранг важности<select name="rank">${['S','A','B','C','D'].map(r=>`<option ${r===d.rank?'selected':''}>${r}</option>`).join('')}</select></label></div><div class="nx-formtabs"><button type="button" class="nx-formtab" data-action="source" aria-pressed="${!state.preview}">Описание · Markdown</button><button type="button" class="nx-formtab" data-action="preview" aria-pressed="${state.preview}">Просмотр</button></div>${state.preview?`<div class="nx-preview nx-description">${markdown(d.description||'Подробности задачи появятся здесь.')}</div>`:`<label class="nx-field">Заметки и подробности<textarea name="description" placeholder="Списки, пояснения, важные детали">${esc(d.description)}</textarea></label>`}<div class="nx-actions"><button type="button" class="nx-button nx-primary" data-action="save">${icon('check')}Сохранить задачу</button><button type="button" class="nx-button" data-action="nav" data-page="tasks">К задачам</button></div></div>`;}
+ function extraView(){if(state.page==='reminders')return header('Напоминания','Сигналы, которые помогают возвращаться к делам.')+`<article class="nx-reminder"><div><h3>Размяться и отдохнуть от экрана</h3><p>Простой сигнал · каждый час, в :00</p></div><button type="button" class="nx-button" data-action="toggle-reminder" aria-pressed="true">Включено</button></article><article class="nx-reminder"><div><h3>Сменить постельное бельё</h3><p>Через две недели после выполнения</p></div><button type="button" class="nx-button" data-action="linen">Готово</button></article>`;return header('Настройки','Всё важное для спокойной работы.')+`<div class="nx-form"><label class="nx-field">Монитор для уведомлений<select><option>Автоматический выбор</option><option>Основной монитор</option><option>Дополнительный монитор</option></select></label><label class="nx-reminder"><span><strong>Запускать вместе с Windows</strong><p>Возвращаться к делам после включения компьютера.</p></span><input type="checkbox" checked aria-label="Запускать вместе с Windows"></label><label class="nx-reminder"><span><strong>Периодическая сводка</strong><p>Напоминать о задачах каждые три часа.</p></span><input type="checkbox" checked aria-label="Периодическая сводка"></label></div>`;}
+ function renderSidebar(){const nav=(page,text,name,count='')=>`<button type="button" class="nx-navbutton ${page==='new'?'nx-new':''}" data-action="nav" data-page="${page}" ${(state.page===page||(page==='week'&&state.page==='month'))?'aria-current="page"':''}>${icon(name)}<span>${text}</span>${count!==''?'<span class="nx-badgecount">'+count+'</span>':''}</button>`;sidebar.innerHTML=`<div><div class="nx-brand"><span class="nx-logo">${icon('check')}</span>notifs</div><p class="nx-tagline">Твои дела. Твой ритм.</p></div><nav class="nx-nav" aria-label="Разделы приложения">${nav('new','Новая задача','plus')}${nav('tasks','Мои задачи','list-todo',state.tasks.filter(t=>!t.done).length)}${nav('progress','В процессе','play',Object.keys(state.sessions).length)}${nav('week','Календарь','calendar-days')}${nav('reminders','Напоминания','bell')}${nav('history','История','history')}</nav><div class="nx-sidebarbottom">${nav('settings','Настройки','sliders-horizontal')}<div class="nx-profile"><span class="nx-avatar">${icon('user-round')}</span><span>Моё пространство<br><span class="nx-muted">На этом компьютере</span></span></div></div>`;}
+ function render(){
+  renderSidebar();
+  main.innerHTML=(state.page==='month'?monthView():state.page==='new'?editorView():['settings','reminders'].includes(state.page)?extraView():listView())+`<div class="nx-status" role="status" aria-live="polite">${esc(state.notice)}${removedTask?`<button type="button" class="nx-button" data-action="undo-delete">${icon('undo-2')}Восстановить удалённую задачу</button>`:''}</div><div class="nx-footnote">${icon('hard-drive')}Задачи, планы и заметки в одном месте</div>`;
+  const actions=main.querySelector('.nx-detail .nx-actions');
+  if(actions)actions.insertAdjacentHTML('beforeend',`<button type="button" class="nx-button nx-delete" data-action="delete-task" data-id="${state.selected}">${icon('trash-2')}Удалить</button>`);
+  if(state.page==='new'&&!state.preview){const label=main.querySelector('textarea').closest('label');label.insertAdjacentHTML('beforebegin',`<div class="nx-formatbar" role="group" aria-label="Форматирование выделенного текста"><button type="button" class="nx-button" data-action="format-bold" data-tooltip="Жирный: Ctrl+B или две звёздочки">${icon('bold')}Жирный</button><button type="button" class="nx-button" data-action="format-italic" data-tooltip="Курсив: Ctrl+I или звёздочка">${icon('italic')}Курсив</button><span class="nx-small nx-muted">Выделение + * → *текст*</span></div>`);}
+  refreshIcons();paintNotification();updateTimerLabels();
+ }
+ function askDelete(t){pendingDeleteId=t.id;deleteDialog.innerHTML=`<h2 id="nx-delete-title">Удалить задачу?</h2><p id="nx-delete-description">«${esc(t.title)}» исчезнет из списка и календаря. Удаление можно будет отменить кнопкой «Восстановить».</p>${state.sessions[t.id]?'<p style="margin-top:10px">Занятие и его напоминание будут остановлены.</p>':''}<div class="nx-actions"><button type="button" class="nx-button" data-action="keep-task" autofocus>Оставить</button><button type="button" class="nx-button nx-danger" data-action="confirm-delete">${icon('trash-2')}Удалить</button></div>`;deleteDialog.showModal();const box=app.getBoundingClientRect();deleteDialog.style.top=Math.max(24,box.top+(box.height-deleteDialog.getBoundingClientRect().height)/2)+'px';refreshIcons();}
+ function deleteTask(){const t=getTask(pendingDeleteId);if(!t)return;const index=state.tasks.indexOf(t),s=state.sessions[t.id];removedTask={task:{...t},index,session:s?{...s,activeMs:activeElapsed(s),activeSince:null,pausedAt:s.pausedAt||state.now,remainingMs:s.pausedAt?s.remainingMs:s.due===null?null:Math.max(0,s.due-state.now),due:null,notified:false}:null};state.tasks.splice(index,1);delete state.sessions[t.id];state.sticky.delete(t.id);if(state.notification===t.id)state.notification=null;if(state.selected===t.id)state.selected=state.tasks[index]?.id??state.tasks[index-1]?.id??null;deleteDialog.close();pendingDeleteId=null;state.notice='Задача «'+t.title+'» удалена.';render();(main.querySelector('.nx-selected .nx-cardhit')||sidebar.querySelector('[data-page="new"]'))?.focus({preventScroll:true});}
+ function undoDelete(){if(!removedTask)return;const saved=removedTask;state.tasks.splice(Math.min(saved.index,state.tasks.length),0,saved.task);if(saved.session)state.sessions[saved.task.id]=saved.session;state.selected=saved.task.id;state.page='tasks';state.filter='all';removedTask=null;state.notice=saved.session?'Задача восстановлена. Занятие возвращено на паузе.':'Задача восстановлена.';render();main.querySelector('.nx-selected .nx-cardhit')?.focus({preventScroll:true});}
+ function openRange(from,to){state.range={from:from<to?from:to,to:from<to?to:from};paintRange();renderDialog();dialog.showModal();const box=app.getBoundingClientRect();dialog.style.top=Math.max(24,box.top+(box.height-dialog.getBoundingClientRect().height)/2)+'px';refreshIcons();}
+ function renderDialog(){const items=periodTasks(state.range);dialog.innerHTML=`<div class="nx-dialoghead"><div><p class="nx-overline">${state.range.from===state.range.to?'ЗАДАЧИ НА ДЕНЬ':'ВЫБРАННЫЙ ПЕРИОД'}</p><h2 id="nx-dialog-title">${spanLabel(state.range)}</h2><p class="nx-subtitle">Задач: ${items.length} · каждая показана один раз</p></div><button type="button" class="nx-iconbutton" data-action="close-dialog" aria-label="Закрыть задачи периода" autofocus>${icon('x')}</button></div><div class="nx-queue">${items.map(t=>card(t,{period:state.range})).join('')||'<p class="nx-muted nx-small">В этом периоде задач нет.</p>'}</div><div class="nx-actions"><button type="button" class="nx-button nx-primary" data-action="go-period">${icon('arrow-right')}${state.range.from===state.range.to?'Перейти к этому дню':'Перейти к этому периоду'}</button></div>`;refreshIcons();}
+ function paintRange(){const from=state.range.from,to=state.range.to;main.querySelectorAll('.nx-day').forEach(b=>{const active=b.dataset.date>=from&&b.dataset.date<=to;b.classList.toggle('nx-inrange',active);b.setAttribute('aria-pressed',String(active));});const label=main.querySelector('[data-range-label]');if(label)label.textContent=spanLabel(state.range);const fromField=main.querySelector('[name="range-from"]'),toField=main.querySelector('[name="range-to"]');if(fromField)fromField.value=from;if(toField)toField.value=to;}
+ function paintNotification(){if(!state.notification){checkin.hidden=true;return;}const t=getTask(state.notification),s=state.sessions[t?.id];if(!t||!s||t.done||s.pausedAt){state.notification=null;checkin.hidden=true;return;}checkin.innerHTML=`<div class="nx-checkinhead"><span>NOTIFS · ВРЕМЯ ПРОВЕРИТЬ</span><button type="button" class="nx-iconbutton" data-action="dismiss-checkin" aria-label="Закрыть напоминание">${icon('x')}</button></div><h3>Сделал задачу?</h3><p>${esc(t.title)}</p><p style="margin-top:10px">Активное время — ${duration(Math.floor(activeElapsed(s)/60000))}, без пауз. Оценка — ${duration(t.estimate)}.</p><div class="nx-actions"><button type="button" class="nx-button nx-primary" data-action="complete" data-id="${t.id}">${icon('check')}Готово</button><button type="button" class="nx-button" data-action="extend" data-id="${t.id}">Ещё 15 минут</button></div>`;checkin.hidden=false;checkin.setAttribute('role','status');refreshIcons();}
+ function updateTimerLabels(){root.querySelectorAll('[data-session]').forEach(e=>e.textContent=sessionText(Number(e.dataset.session)));root.querySelectorAll('[data-active-time]').forEach(e=>{const s=state.sessions[Number(e.dataset.activeTime)],minutes=s?Math.floor(activeElapsed(s)/60000):0;e.textContent=minutes?duration(minutes):'меньше минуты';});root.querySelectorAll('[data-clock]').forEach(e=>e.textContent=timeLabel(state.now));root.querySelector('[data-demo="advance"]').disabled=!Object.values(state.sessions).some(s=>s.due&&!s.pausedAt);}
+ function updateTime(){state.now=initialNow+(Date.now()-realStart)+state.offset;for(const [id,s] of Object.entries(state.sessions)){if(s.due&&state.now>=s.due&&!s.notified&&!getTask(id)?.done){s.notified=true;state.notification=Number(id);paintNotification();break;}}updateTimerLabels();}
+ function saveDraft(){main.querySelectorAll('[name]').forEach(el=>{if(Object.hasOwn(state.draft,el.name))state.draft[el.name]=el.value;});}
+ function formatSelection(marker){const field=main.querySelector('textarea[name="description"]');if(!field)return;const start=field.selectionStart,end=field.selectionEnd,text=field.value.slice(start,end);field.setRangeText(marker+text+marker,start,end,'select');field.focus({preventScroll:true});field.setSelectionRange(start+marker.length,end+marker.length);field.dispatchEvent(new Event('input',{bubbles:true}));}
+ function saveTask(){saveDraft();if(!state.draft.title.trim()){state.error=true;render();main.querySelector('[name="title"]').focus({preventScroll:true});return;}const d=state.draft,original=getTask(state.edit),id=original?.id??nextTaskId++;const data={id,title:d.title.trim(),description:d.description,rank:d.rank,created:original?.created??new Date(state.now).toISOString().slice(0,19),deadline:d.date?d.date+'T'+(d.time||'23:59')+':00':'',estimate:Number(d.estimate)>0?Number(d.estimate):0,done:original?.done??false};if(original)Object.assign(original,data);else state.tasks.push(data);state.page='tasks';state.selected=id;state.filter='all';state.edit=null;state.error=false;state.notice='Задача сохранена.';state.draft={title:'',description:'',date:'',time:'',estimate:'',rank:'B'};render();}
+ root.addEventListener('input',()=>{if(state.page==='new')saveDraft();});
+ root.addEventListener('click',event=>{
+  const b=event.target.closest('button');if(!b||!root.contains(b))return;
+  if(b.dataset.demo==='advance'){const due=Math.min(...Object.values(state.sessions).filter(s=>s.due).map(s=>s.due));if(Number.isFinite(due)){state.offset+=Math.max(0,due-state.now)+1000;updateTime();}return;}
+  if(b.dataset.demo==='skip'){state.offset+=15*60000;updateTime();return;}
+  const a=b.dataset.action,t=getTask(b.dataset.id);if(!a)return;if(state.page==='new')saveDraft();state.notice='';
+  if(a==='delete-task'&&t){askDelete(t);return;}
+  if(a==='keep-task'){pendingDeleteId=null;deleteDialog.close();return;}
+  if(a==='confirm-delete'){deleteTask();return;}
+  if(a==='undo-delete'){undoDelete();return;}
+  if(a==='format-bold'||a==='format-italic'){formatSelection(a==='format-bold'?'**':'*');return;}
+  if(a==='month-day'){if(event.detail!==0)return;if(state.keyboardRange){state.keyboardRange=false;openRange(state.range.from,state.range.to);return;}if(event.shiftKey&&state.anchor)openRange(state.anchor,b.dataset.date);else{state.anchor=b.dataset.date;openRange(b.dataset.date,b.dataset.date);}return;}
+  if(a==='nav'){state.page=b.dataset.page;state.sticky.clear();state.filter=state.page==='history'?'done':'all';if(state.page==='new'&&state.edit){state.edit=null;state.draft={title:'',description:'',date:'',time:'',estimate:'',rank:'B'};}state.error=false;}
+  else if(a==='select'&&t){state.selected=t.id;if(dialog.open){dialog.close();state.period={...state.range};state.week=startWeek(state.range.from);state.page='week';}}
+  else if(a==='complete'&&t){t.done=!t.done;state.sticky.add(t.id);if(t.done){delete state.sessions[t.id];if(state.notification===t.id)state.notification=null;}state.notice=t.done?'Выполнено. Карточка остаётся в списке.':'Задача возвращена в работу.';}
+  else if(a==='filter'){state.filter=b.dataset.filter;state.sticky.clear();}
+  else if(a==='start'&&t){state.sessions[t.id]={start:state.now,activeSince:state.now,activeMs:0,pausedAt:null,remainingMs:null,due:t.estimate?state.now+t.estimate*60000:null,notified:false};state.notice='Начало занятия отмечено. Задача доступна в разделе «В процессе».';}
+  else if(a==='pause'&&t){const s=state.sessions[t.id];if(s&&!s.pausedAt){s.activeMs=activeElapsed(s);s.activeSince=null;s.pausedAt=state.now;s.remainingMs=s.due===null?null:Math.max(0,s.due-state.now);s.due=null;if(state.notification===t.id)state.notification=null;}state.notice='Пауза. Оставшееся время сохранено; во время паузы напоминание не придёт.';}
+  else if(a==='resume'&&t){const s=state.sessions[t.id];if(s?.pausedAt){s.lastPausedAt=s.pausedAt;s.pausedAt=null;s.activeSince=state.now;s.due=s.remainingMs===null?null:state.now+s.remainingMs;s.notified=false;}state.notice='Продолжаем с сохранённого остатка времени.';}
+  else if(a==='cancel-session'&&t){delete state.sessions[t.id];if(state.notification===t.id)state.notification=null;state.page='tasks';state.filter='all';state.selected=t.id;state.notice='Начало занятия отменено. Сама задача осталась без изменений.';}
+  else if(a==='extend'&&t){const s=state.sessions[t.id];if(s){s.due=state.now+15*60000;s.notified=false;}state.notification=null;state.notice='Спросим ещё раз через 15 минут. Исходная оценка не изменилась.';}
+  else if(a==='dismiss-checkin'){state.notification=null;paintNotification();return;}
+  else if(a==='edit'&&t){state.edit=t.id;state.page='new';state.preview=false;state.error=false;state.draft={title:t.title,description:t.description,date:t.deadline?.slice(0,10)||'',time:t.deadline?.slice(11,16)||'',estimate:t.estimate||'',rank:t.rank};}
+  else if(a==='source')state.preview=false;
+  else if(a==='preview')state.preview=true;
+  else if(a==='save'){saveTask();return;}
+  else if(a==='month'){state.page='month';const d=new Date(stamp(state.period.from));state.month=d.getUTCMonth();state.year=d.getUTCFullYear();state.range={...state.period};}
+  else if(a==='back-week')state.page='week';
+  else if(a==='week-prev'||a==='week-next'){state.week=addDay(state.week,a==='week-prev'?-7:7);state.period={from:state.week,to:addDay(state.week,6)};state.sticky.clear();}
+  else if(a==='week-day'){state.period={from:b.dataset.date,to:b.dataset.date};state.sticky.clear();}
+  else if(a==='whole-week'){state.period={from:state.week,to:addDay(state.week,6)};state.sticky.clear();}
+  else if(a==='month-prev'||a==='month-next'){const d=new Date(Date.UTC(state.year,state.month+(a==='month-prev'?-1:1),1));state.month=d.getUTCMonth();state.year=d.getUTCFullYear();}
+  else if(a==='range-apply'){const from=main.querySelector('[name="range-from"]').value,to=main.querySelector('[name="range-to"]').value;if(from&&to)openRange(from,to);return;}
+  else if(a==='close-dialog'){dialog.close();return;}
+  else if(a==='go-period'){dialog.close();state.period={...state.range};state.week=startWeek(state.range.from);state.page='week';state.filter='all';state.sticky.clear();}
+  else if(a==='toggle-reminder'){const active=b.getAttribute('aria-pressed')==='true';b.setAttribute('aria-pressed',String(!active));b.textContent=active?'Выключено':'Включено';return;}
+  else if(a==='linen'){state.notice='Выполнено. Следующее дело — через две недели.';}
+  render();if(dialog.open)renderDialog();if(state.page==='new'&&(a==='edit'||a==='nav'))main.querySelector('[name="title"]')?.focus({preventScroll:true});
+ });
+ root.addEventListener('pointerdown',event=>{const b=event.target.closest('.nx-day');if(!b||event.button!==0)return;event.preventDefault();b.focus({preventScroll:true});const grid=b.closest('.nx-monthgrid'),anchor=event.shiftKey&&state.anchor?state.anchor:b.dataset.date;state.anchor=anchor;state.drag={anchor,end:b.dataset.date,pointer:event.pointerId,grid};state.range={from:anchor<b.dataset.date?anchor:b.dataset.date,to:anchor<b.dataset.date?b.dataset.date:anchor};grid.setPointerCapture(event.pointerId);paintRange();});
+ root.addEventListener('pointermove',event=>{if(!state.drag||state.drag.pointer!==event.pointerId)return;const b=document.elementFromPoint(event.clientX,event.clientY)?.closest('.nx-day');if(!b||!main.contains(b))return;state.drag.end=b.dataset.date;const {anchor,end}=state.drag;state.range={from:anchor<end?anchor:end,to:anchor<end?end:anchor};paintRange();});
+ root.addEventListener('pointerup',event=>{if(!state.drag||state.drag.pointer!==event.pointerId)return;const drag=state.drag;state.drag=null;if(drag.grid.hasPointerCapture(event.pointerId))drag.grid.releasePointerCapture(event.pointerId);openRange(drag.anchor,drag.end);});
+ root.addEventListener('pointercancel',()=>{state.drag=null;});
+ root.addEventListener('keydown',event=>{
+  if(event.key==='Escape'&&deleteDialog.open){event.preventDefault();pendingDeleteId=null;deleteDialog.close();return;}
+  const field=event.target.closest('textarea[name="description"]');
+  if(field&&!event.isComposing){const star=!event.ctrlKey&&!event.metaKey&&!event.altKey&&(event.key==='*'||(event.shiftKey&&event.code==='Digit8'));const shortcut=(event.ctrlKey||event.metaKey)&&!event.altKey&&['b','i'].includes(event.key.toLowerCase());if(shortcut||(star&&field.selectionStart!==field.selectionEnd)){event.preventDefault();if(!event.repeat)formatSelection(shortcut&&event.key.toLowerCase()==='b'?'**':'*');return;}}
+  if(event.key==='Escape'&&dialog.open){event.preventDefault();dialog.close();return;}
+  if(state.page==='new'&&event.ctrlKey&&event.key.toLowerCase()==='s'){event.preventDefault();saveTask();return;}
+  const b=event.target.closest('.nx-day');if(!b)return;
+  if(event.key==='Enter'||event.key===' '){event.preventDefault();const from=state.keyboardRange?state.range.from:b.dataset.date,to=state.keyboardRange?state.range.to:b.dataset.date;state.keyboardRange=false;openRange(from,to);return;}
+  const delta={ArrowRight:1,ArrowLeft:-1,ArrowDown:7,ArrowUp:-7}[event.key];if(!delta)return;event.preventDefault();const target=addDay(b.dataset.date,delta),next=main.querySelector('.nx-day[data-date="'+target+'"]');if(!next)return;if(event.shiftKey){if(!state.keyboardRange)state.anchor=b.dataset.date;state.keyboardRange=true;state.range={from:state.anchor<target?state.anchor:target,to:state.anchor<target?target:state.anchor};paintRange();}else{state.anchor=target;state.keyboardRange=false;}next.focus({preventScroll:true});
+ });
+ dialog.addEventListener('click',event=>{if(event.target!==dialog)return;const r=dialog.getBoundingClientRect();if(event.clientX<r.left||event.clientX>r.right||event.clientY<r.top||event.clientY>r.bottom)dialog.close();});
+ render();
+ if(globalThis.Tweak){const options={radius:12};const tweak=new globalThis.Tweak({container:app,onChange:()=>app.style.setProperty('--nx-radius',options.radius+'px')});tweak.addSlider(options,'radius',{label:'Скругления карточек',min:6,max:20,unit:'px'});}
+ const timer=setInterval(()=>{if(!root.isConnected){clearInterval(timer);return;}updateTime();},1000);
+})();
+</script>

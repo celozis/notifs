@@ -1,32 +1,67 @@
-# Notifs — desktop design system
+# Notifs — графит и янтарь
 
-Designed first for issue #2 using UI/UX Pro Max. Personal, offline Windows productivity tool, Russian UI, WPF (.NET 10), mouse and keyboard.
+Базовое оформление выбрано пользователем 18 ноября 2026 года; поведение Q1–Q46 подтверждено 19 ноября. Дополненный прототип затем назначен пользователем целевым для Windows-реализации с согласованным разбиением на тикеты. Эта система заменяет светлую бело-бирюзовую версию из `6ffbb29`. Перегенерировать палитру при реализации не требуется.
 
-## Verified guidance and adaptations
+## Обязательные источники
 
-- `personal productivity desktop minimal --design-system`: verified Flat Design and teal productivity palette. Marketing pattern is inapplicable; the narrower `task management desktop` retry also returned a marketing pattern. Neither marketing output is persisted here.
-- `minimal productivity --domain style`: Minimalism & Swiss Style; clear hierarchy, spacious functional grid, no decorative gradients or shadows.
-- `keyboard focus forms --stack wpf`: keyboard navigation, commands/input bindings, view-only code-behind.
-- `error summary validation --domain ux`: inline errors, retained input, focus invalid field. Web ARIA examples translate to WPF AutomationProperties.
-- Font search did not verify an offline Cyrillic pairing. Platform fallback: installed Segoe UI throughout; Consolas for code. No web fonts or network content.
+1. [Согласованные правила](../../docs/product/design-spec-2026-11-18.md).
+2. Этот Master и [tokens.json](tokens.json).
+3. [Эталон и снимки](reference/README.md).
+4. Тикет функции; исходные критерии сохраняются, если новая спецификация явно их не заменяет.
 
-## Visual language
+Журнал интервью объясняет происхождение решений; текущие правила собраны в сводной спецификации. Старые концепты — исторические материалы, а не альтернативные темы.
 
-Quiet light workspace. Native title bar and resizing. Left navigation (tasks/history), middle task list, right reading pane. Editing is an owned dialog with explicit Save and Cancel. No inactive future-feature controls. One primary action per context. Empty states offer a useful next action; never insert example tasks into the user's database.
+## Цвета и типографика
 
-Use semantic resources from `tokens.json` in WPF. Primary teal is darkened to #0F766E for white text. Neutral background #F5F7F8, white surfaces, ink #163632, muted ink #52645F, borders #D9E2DF, selected #E4F2EE, danger #B42318. Selected controls also use weight/border, not color alone. Focus outline #0F766E, 2 DIP. No shadows. Corner radii 8–12 DIP; 4/8 spacing rhythm, 24–32 DIP page gutters.
+Токены экспортируются из одобренного образца командой `python prototypes/ui-concepts/build_reference.py`. Использовать семантические ресурсы WPF, а не отдельные цвета компонентов.
 
-Body 16 DIP, labels 14 DIP, list titles 17 DIP semibold, pane title 26 DIP, page title 32 DIP semibold. Wrap user text. Primary and secondary text meet 4.5:1 on their backgrounds. Minimum action height 44 DIP. Vector line icons share 1.7 DIP stroke. Tooltips and automation names describe icon controls.
+| Роль | Значение |
+| --- | --- |
+| Фон | `#20211F` |
+| Навигация | `#181A17` |
+| Карточки | `#292C27` |
+| Уведомления | `#33372F` |
+| Наведение | `#393C33` |
+| Основной текст | `#F1F0E6` |
+| Вторичный текст | `#BDC0B1` |
+| Граница | `#505646` |
+| Акцент/фокус | `#E5B666` |
+| Текст на акценте | `#282014` |
+| Мягкий акцент | `#40392B` |
+| Выбранная карточка | `#38382B` |
+| Ошибка/удаление | `#FFB5AE` |
 
-## Interaction and sizing
+Ранги: отдельные пары заливки/текста в tokens.json, буква обязательна. S красный, A оранжевый, B золотистый, C жёлто-зелёный, D зелёный. Проверенные пары текста выше 4,5:1; измерения — рядом со снимками.
 
-- Ctrl+N creates, Ctrl+S saves in editor; native Tab, Enter, Space, Escape behavior. Focus first input on open, invalid title on failure. Owned modal traps navigation and returns focus to its trigger.
-- Dirty editor asks before discarding, including title-bar close and Escape. Errors preserve both fields. Storage failures show a readable retry path; never report success before storage succeeds.
-- List virtualization and asynchronous storage work. Busy actions are disabled, with a visible status. Completion remains recoverable from history.
-- Default window 1240×800; minimum 760×560. Below 1040 DIP, navigation becomes a compact top row. Below 900 DIP, list/details share one pane with an explicit return-to-list action. Each content region scrolls; actions remain visible. Long titles, Markdown, empty lists, 150%/200% scaling are QA cases.
-- Optional hover color interpolation: 160 ms, only when Windows client-area animation is enabled. Press and focus remain immediate. No movement or decorative entrance animations.
-- This iteration provides a light theme. Dark/mobile-specific checklist items do not apply to this Windows-only release; no untested dark variant is claimed.
+Установленный Segoe UI, для кода Consolas; без веб-шрифтов. Размеры эталона: основной 16, заголовок страницы 29/600, подробностей 22/600, название карточки 15/550, поле 15, подпись 13, метаданные 11–12. Основной интерлиньяж 1,5. Точные размеры/веса конкретного элемента смотреть в CSS; не заменять единой типографикой всех контролов.
 
-## Required states
+## Геометрия и состояния
 
-Active list / empty active list; history / empty history; selected task / no selection; new/edit dialog; invalid title; saving; storage error; Markdown source and local formatted preview. Created timestamp is always retained through edit/complete/restore.
+- Навигация слева 178, на узком окне 58 с иконками и доступными именами; не переносится наверх.
+- Поля рабочей области: сверху 30, сбоку 25. Колонки списка/подробностей равные, зазор 20.
+- Радиус карточки 12, кнопки 8. Высота действия минимум 44. Иконка 18, штрих 1,7. Квадрат ранга 26; календарная мини-строка 18–19.
+- Вся карточка реагирует на наведение/фокус/выбор поверхностью, янтарной границей и левой полосой. Галочка — отдельное действие.
+- Выполненное: приглушённая поверхность, зачёркнутое название, галочка/подпись; текст остаётся читаемым.
+- Редакторы в рабочей области. Центральные панели — только период, фильтры и подтверждения.
+- До 850 логических единиц — список либо подробности с возвратом. До 550 — иконки навигации, формы в одну колонку. В WPF учитывать рабочую область/DPI, а не копировать демонстрационную минимальную высоту 930.
+- Списки и длинные описания прокручиваются без потери действий. Названия обрезаются только в обозначенных календарных мини-строках.
+
+## Уведомления
+
+До двух карточек шириной 365 или доступной шириной узкого окна. Отступ справа/снизу 22, зазор 10. Новая снизу, старая сверху, третья вытесняет старейшую. Над стеком «Скрыть все», скрыта при пустом стеке.
+
+Автоисчезновения нет. При наведении нет автоматического сдвига/вытеснения; действия работают сразу. Вход новой карточки — 180 мс с небольшим подъёмом снизу, hover поверхности — 150 мс. При reduced-motion/выключенной анимации Windows движение отключается. Появление не активирует окно и не меняет фокус.
+
+## Реализация и проверка
+
+Прототип — визуальный источник, не production-код. Доменные вычисления/хранение отделить от представления и времени. Использовать команды WPF/InputBindings, нативные доступные контролы, AutomationProperties, предсказуемый Tab и видимый фокус. Код представления управляет выделением, фокусом и анимацией.
+
+Модальная панель удерживает фокус и возвращает его к инициатору. Закрытие фильтров не применяет черновые значения. Сохранение сообщает об успехе после записи; ошибка сохраняет ввод. Настоящие хранение, загрузка, фон и доставка проверяются в WPF.
+
+Сравнивать контент при одинаковых логических размерах и масштабе. Декоративная рамка/заголовок макета не создают второй заголовок внутри WPF. Сверять цвета, поля, размеры, переносы и состояния; сглаживание шрифта не оправдывает другую компоновку.
+
+## UI/UX Pro Max
+
+Подтверждённые поиски исходных концептов: `dark mode --domain style`, `amber dark --domain color`, `color contrast --domain ux`, `dragging movements --domain ux`, `keyboard focus navigation --stack wpf`. Графит/янтарь — выбранная пользователем адаптация, а не автоматически предложенная зелёная productivity-палитра.
+
+Дополнение: `filter apply cancel --domain ux` вернул Chip Collection Reflow — применён перенос коллекций, не принят как источник Apply/Cancel. Уточнение `explicit form submission --domain ux` вернул Submit Feedback и Form Labels — применены подписи и обратная связь. Apply/Escape определены пользователем в Q33.

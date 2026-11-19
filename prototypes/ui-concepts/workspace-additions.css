@@ -1,0 +1,83 @@
+/* Product styles extending the approved graphite/amber source, not a new theme. */
+#notifs-next .nx-listtools{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+#notifs-next .nx-listtools .nx-sectionlabel{margin:0}
+#notifs-next .nx-settings-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px}
+#notifs-next .nx-settings-section{padding:22px;border:1px solid var(--nx-line);border-radius:12px;background:var(--nx-panel);min-width:0;margin-bottom:18px}
+#notifs-next .nx-settings-section h3{margin-bottom:6px}
+#notifs-next .nx-settings-section>.nx-small{margin-bottom:20px}
+#notifs-next .nx-settings-section .nx-field{margin-bottom:16px}
+#notifs-next .nx-settings-section .nx-field input,#notifs-next .nx-settings-section .nx-field select{background:var(--nx-bg)}
+#notifs-next .nx-checkrow{display:flex;gap:10px;align-items:center;min-height:44px;font-size:13px;color:var(--nx-ink);font-weight:400}
+#notifs-next .nx-checkrow input{width:18px;height:18px;min-height:0;accent-color:var(--nx-accent);flex:none}
+#notifs-next .nx-rankchoices{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:18px}
+#notifs-next .nx-rankchoices .nx-checkrow{gap:6px}
+#notifs-next .nx-paneltitle{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px}
+#notifs-next .nx-filter-dialog{width:min(670px,calc(100% - 28px));max-height:min(850px,90vh)}
+#notifs-next .nx-filter-dialog form{overflow:auto;min-height:0;padding:3px}
+#notifs-next .nx-filter-dialog fieldset{border:0;border-top:1px solid var(--nx-line);padding:18px 0 0;margin:0 0 2px;min-width:0}
+#notifs-next .nx-filter-dialog legend{font-size:13px;font-weight:600;padding-right:12px;color:var(--nx-accent)}
+#notifs-next .nx-filter-dialog .nx-actions{position:sticky;bottom:-3px;background:var(--nx-panel);padding:12px 0 0;margin-top:0}
+#notifs-next .nx-chips{display:flex;gap:7px;flex-wrap:wrap;margin:0 0 15px}
+#notifs-next .nx-chip{border:1px solid var(--nx-line);border-radius:6px;padding:4px 9px;color:var(--nx-muted);font-size:11px}
+#notifs-next .nx-reminder{align-items:flex-start}
+#notifs-next .nx-reminder .nx-actions{margin-top:14px}
+#notifs-next .nx-reminder-copy{min-width:0;flex:1}
+#notifs-next .nx-reminder-icon{width:40px;height:40px;display:grid;place-items:center;border-radius:10px;background:var(--nx-soft);color:var(--nx-accent);flex:none}
+#notifs-next .nx-disabled{background:var(--nx-bg)}
+#notifs-next .nx-reminder-status{color:var(--nx-accent);font-size:11px;letter-spacing:.8px;margin-bottom:6px}
+#notifs-next .nx-reminder-history{margin-top:18px;border-top:1px solid var(--nx-line);padding-top:15px}
+#notifs-next .nx-reminder-history p{display:flex;justify-content:space-between;gap:12px}
+#notifs-next .nx-personal{border-top:1px solid var(--nx-line);padding-top:18px;margin:22px 0}
+#notifs-next .nx-personal summary{color:var(--nx-accent);font-size:14px;min-height:44px;cursor:pointer}
+#notifs-next .nx-personal .nx-formrow{margin-top:12px}
+#notifs-next .nx-fieldhint{color:var(--nx-muted);font-size:11px;font-weight:400}
+#notifs-next .nx-toast-stack{position:absolute;z-index:6;right:22px;bottom:22px;width:min(365px,calc(100% - 38px));display:grid;gap:10px;pointer-events:auto}
+#notifs-next .nx-toast-stack[hidden]{display:none}
+#notifs-next .nx-hideall{display:flex;justify-content:flex-end;align-items:center;padding:4px 0;font-size:12px;min-height:36px;color:var(--nx-muted)}
+#notifs-next .nx-hideall button{padding:7px 12px;border-radius:6px;background:var(--nx-rail);border:1px solid var(--nx-line)}
+#notifs-next .nx-toast{background:var(--nx-raised);border:1px solid var(--nx-line);border-left:3px solid var(--nx-accent);border-radius:12px;box-shadow:0 12px 30px #0005;padding:17px;min-width:0;animation:nx-toast-enter .18s ease-out}
+#notifs-next .nx-toast h3{font-size:17px;margin:10px 0 6px}
+#notifs-next .nx-toast p{font-size:12px;color:var(--nx-muted);line-height:1.65}
+#notifs-next .nx-toast .nx-actions{margin-top:14px;gap:7px}
+#notifs-next .nx-toast .nx-button{padding:8px 10px}
+#notifs-next .nx-toast .nx-iconbutton{border:0!important;width:30px;height:30px;flex:none}
+#notifs-next .nx-toast .nx-checkinhead{letter-spacing:.7px;font-size:10px}
+#notifs-next .nx-toast-list{display:grid;gap:5px;margin-top:10px;font-size:12px;color:var(--nx-muted)}
+#notifs-next .nx-toast-list div{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#notifs-next .nx-back-list{display:none;margin-bottom:16px}
+#notifs-next .nx-queue{max-height:680px;overflow-y:auto;padding:2px}
+#notifs-next .nx-dialog .nx-queue{max-height:none}
+#notifs-next .nx-daytask .nx-repeat-mark{color:var(--nx-accent);flex:none;display:grid;place-items:center;width:18px;height:19px}
+#notifs-next .nx-daytask .nx-repeat-mark svg{width:14px;height:14px}
+#notifs-next .nx-daytask.nx-planned{opacity:.85}
+#notifs-next .nx-empty .nx-button{margin-top:15px}
+#notifs-next .nx-form .nx-actions{margin-bottom:10px}
+#notifs-next .nx-app .nx-description strong{color:var(--nx-ink)}
+#notifs-next .nx-app .nx-description pre{white-space:pre-wrap;background:var(--nx-bg);padding:12px;border-radius:6px;font-family:Consolas,monospace}
+#notifs-next .nx-app .nx-description code{font-family:Consolas,monospace}
+@keyframes nx-toast-enter{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+@media(max-width:850px){
+ #notifs-next .nx-split>div:last-child{display:none}
+ #notifs-next .nx-app[data-detail="true"] .nx-split>section:first-child{display:none}
+ #notifs-next .nx-app[data-detail="true"] .nx-split>div:last-child{display:block}
+ #notifs-next .nx-back-list{display:inline-flex}
+ #notifs-next .nx-settings-grid{grid-template-columns:1fr;gap:0}
+}
+@media(max-width:550px){
+ #notifs-next .nx-shell{grid-template-columns:58px minmax(0,1fr)}
+ #notifs-next .nx-sidebar{border-right:1px solid var(--nx-line);border-bottom:0;padding:20px 6px;gap:24px}
+ #notifs-next .nx-nav{grid-template-columns:1fr;gap:8px}
+ #notifs-next .nx-navbutton{justify-content:center;min-height:44px;padding:10px 4px;gap:0}
+ #notifs-next .nx-navbutton>span,#notifs-next .nx-tagline,#notifs-next .nx-profile{display:none}
+ #notifs-next .nx-navbutton.nx-new{grid-column:auto;margin-bottom:12px}
+ #notifs-next .nx-brand{font-size:0;padding:0;justify-content:center;gap:0}
+ #notifs-next .nx-sidebarbottom{margin-top:auto}
+ #notifs-next .nx-main{padding:24px 12px}
+ #notifs-next .nx-toast-stack{right:12px;bottom:16px;width:calc(100% - 24px)}
+ #notifs-next .nx-reminder{padding:16px;gap:10px}
+ #notifs-next .nx-settings-section{padding:16px}
+ #notifs-next .nx-check{width:28px;height:28px;left:10px;top:18px}
+ #notifs-next .nx-cardhit{padding-left:48px;padding-right:10px}
+ #notifs-next .nx-listtools>.nx-button{width:100%}
+}
+@media(prefers-reduced-motion:reduce){#notifs-next .nx-toast{animation:none}}

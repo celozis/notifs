@@ -2,3 +2,5 @@
 **/obj/
 .scratch/
 **/.artifacts/
+**/__pycache__/
+*.pyc
