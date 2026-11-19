@@ -1,6 +1,10 @@
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Automation;
 using System.Windows.Input;
+using System.Windows.Media;
+using Path = System.Windows.Shapes.Path;
+using System.Windows.Threading;
 
 namespace Notifs.App;
 
@@ -9,45 +13,171 @@ public partial class MainWindow : Window
     public RelayCommand NewCommand { get; }
     public RelayCommand EditCommand { get; }
     public RelayCommand BackToListCommand { get; }
+    public RelayCommand CancelEditorCommand { get; }
     private readonly MainViewModel model;
+    private EditorViewModel? editor;
+    private readonly Dictionary<Guid, EditorViewModel> pendingEdits = [];
+    private EditorViewModel? pendingNew;
+    private bool showingDetails;
+    private readonly List<(Button Button, TextBlock Label)> navigation = [];
+    private Button? activeNavigation;
+    private Button? historyNavigation;
+
     public MainWindow(MainViewModel model)
     {
         this.model = model;
-        NewCommand = new(() => OpenEditor(false), () => !model.IsBusy && !model.HasError);
-        EditCommand = new(() => OpenEditor(true), () => model.HasSelection && !model.IsBusy && !model.HasError);
-        BackToListCommand = new(() => { model.Selected = null; TaskList.Focus(); });
+        NewCommand = new(() => OpenEditor(false), () => !model.IsBusy && !model.HasError && editor?.IsBusy != true);
+        EditCommand = new(() => OpenEditor(true), () => model.HasSelection && !model.IsBusy && !model.HasError && editor?.IsBusy != true);
+        BackToListCommand = new(() => { showingDetails = false; AdaptLayout(); FocusSelected(); });
+        CancelEditorCommand = new(CloseEditor, () => editor?.IsBusy != true);
         InitializeComponent();
         DataContext = model;
+        AddNavigation("Новая задача", "M9,1 V17 M1,9 H17", NewCommand, primary: true);
+        activeNavigation = AddNavigation("Мои задачи", "M1,3 L3,5 L6,1 M9,3 H17 M1,12 L3,14 L6,10 M9,12 H17", new AsyncCommand(() => NavigateAsync(false), CanNavigate));
+        AddNavigation("В процессе", "M4,1 L16,9 L4,17 Z", null);
+        AddNavigation("Календарь", "M2,3 H16 V17 H2 Z M5,0 V6 M13,0 V6 M2,8 H16 M6,11 H7 M11,11 H12", null);
+        AddNavigation("Напоминания", "M3,13 H15 L13,10 V6 A4,4 0 0 0 5,6 V10 Z M7,16 Q9,19 11,16", null);
+        historyNavigation = AddNavigation("История", "M2,2 V7 H7 M2,7 A7,7 0 1 1 2,13 M9,4 V10 L13,12", new AsyncCommand(() => NavigateAsync(true), CanNavigate));
+        AddNavigation("Настройки", "M1,4 H17 M1,9 H17 M1,14 H17 M5,1 V7 M12,6 V12 M7,11 V17", null, bottom: true);
         InputBindings.Add(new KeyBinding(NewCommand, Key.N, ModifierKeys.Control));
+        InputBindings.Add(new KeyBinding(new RelayCommand(() => editor?.SaveCommand.Execute(null), () => editor?.SaveCommand.CanExecute(null) == true), Key.S, ModifierKeys.Control));
+        InputBindings.Add(new KeyBinding(CancelEditorCommand, Key.Escape, ModifierKeys.None));
         Loaded += async (_, _) => await model.LoadAsync();
         Shell.SizeChanged += (_, _) => AdaptLayout();
-        model.PropertyChanged += (_, args) => { if (args.PropertyName == nameof(model.Selected)) AdaptLayout(); };
+        model.PropertyChanged += (_, args) =>
+        {
+            if (args.PropertyName is nameof(model.Selected) or nameof(model.IsHistory)) AdaptLayout();
+        };
+        TaskList.PreviewMouseLeftButtonUp += (_, args) =>
+        {
+            if (FindAncestor<Button>(args.OriginalSource as DependencyObject) is not null) return;
+            if (FindAncestor<ListBoxItem>(args.OriginalSource as DependencyObject) is not null) { showingDetails = true; AdaptLayout(); if (BackToList.IsVisible) BackToList.Focus(); }
+        };
+        TaskList.PreviewKeyDown += (_, args) =>
+        {
+            if (args.Key is Key.Enter or Key.Space && model.HasSelection && args.OriginalSource is ListBoxItem)
+            { showingDetails = true; AdaptLayout(); BackToList.Focus(); args.Handled = true; }
+        };
+        Closing += (_, args) => { if (editor?.IsBusy == true || model.IsBusy) args.Cancel = true; };
+        AdaptLayout();
     }
-    private async void OpenEditor(bool edit)
+
+    private bool CanNavigate() => !model.IsBusy && editor?.IsBusy != true;
+    private async Task NavigateAsync(bool history)
     {
-        var editor = new EditorWindow(model.CreateEditor(edit)) { Owner = this };
-        if (editor.ShowDialog() == true && editor.SavedId is { } id) await model.EditorSavedAsync(id, !edit);
+        CloseEditor();
+        showingDetails = false;
+        (history ? model.HistoryCommand : model.ActiveCommand).Execute(null);
+        await Dispatcher.InvokeAsync(() => AdaptLayout(), DispatcherPriority.ApplicationIdle);
+    }
+
+    private Button AddNavigation(string name, string geometry, ICommand? command, bool primary = false, bool bottom = false)
+    {
+        var icon = new Path { Data = Geometry.Parse(geometry), Width = 18, Height = 18, Stretch = Stretch.Uniform,
+            StrokeThickness = 1.7, Stroke = (Brush)FindResource(primary ? "OnPrimary" : "Ink"), VerticalAlignment = VerticalAlignment.Center };
+        var label = new TextBlock { Text = name, FontSize = 13, Margin = new Thickness(10, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center, TextWrapping = TextWrapping.NoWrap };
+        var content = new StackPanel { Orientation = Orientation.Horizontal };
+        content.Children.Add(icon); content.Children.Add(label);
+        var button = new Button { Content = content, Command = command, Style = (Style)FindResource(primary ? "PrimaryButton" : "NavigationButton"),
+            Padding = new Thickness(10, 8, 6, 8), Margin = new Thickness(0, 0, 0, primary ? 20 : 8), ToolTip = command is null ? name + " — будет доступно в следующем этапе" : name,
+            IsEnabled = command is not null };
+        AutomationProperties.SetName(button, name);
+        ToolTipService.SetShowOnDisabled(button, true);
+        (bottom ? BottomNavigation : NavItems).Children.Add(button);
+        navigation.Add((button, label));
+        return button;
+    }
+
+    private void OpenEditor(bool edit)
+    {
+        if (editor?.IsBusy == true) return;
+        var originalId = edit ? model.Selected?.Item.Id : null;
+        editor = originalId is { } id && pendingEdits.TryGetValue(id, out var pending) ? pending : !edit && pendingNew is not null ? pendingNew : model.CreateEditor(edit);
+        if (originalId is { } key) pendingEdits[key] = editor; else pendingNew = editor;
+        var currentEditor = editor;
+        // Subscribe once per presentation, then remove the callback after saving or leaving.
+        if (EditorHost.Content is EditorView previous) DetachEditor(previous);
+        var view = new EditorView(editor);
+        Action<Guid> onSaved = async savedId =>
+        {
+            currentEditor.Saved -= EditorSaved;
+            if (originalId is { } editId) pendingEdits.Remove(editId); else pendingNew = null;
+            CloseEditor();
+            await model.EditorSavedAsync(savedId, !edit);
+            showingDetails = true;
+            AdaptLayout();
+            FocusSelected();
+        };
+        savedCallback = onSaved;
+        currentEditor.Saved += EditorSaved;
+        EditorHost.Content = view;
+        EditorHost.Visibility = Visibility.Visible;
+        BrowseView.Visibility = Visibility.Collapsed;
+        StatusNote.SetCurrentValue(TextBlock.TextProperty, "Изменения сохранятся по кнопке «Сохранить задачу»");
+    }
+    private Action<Guid>? savedCallback;
+    private void EditorSaved(Guid id) => savedCallback?.Invoke(id);
+    private void DetachEditor(EditorView view) { if (view.DataContext is EditorViewModel previous) previous.Saved -= EditorSaved; }
+    private void CloseEditor()
+    {
+        if (EditorHost.Content is EditorView view) DetachEditor(view);
+        editor = null;
+        showingDetails = false;
+        savedCallback = null;
+        EditorHost.Content = null;
+        EditorHost.Visibility = Visibility.Collapsed;
+        BrowseView.Visibility = Visibility.Visible;
+        StatusNote.SetBinding(TextBlock.TextProperty, new System.Windows.Data.Binding(nameof(model.Status)));
+        AdaptLayout();
+        FocusSelected();
+    }
+    private void FocusSelected() => Dispatcher.InvokeAsync(() =>
+    {
+        if (model.Selected is not null) TaskList.ScrollIntoView(model.Selected);
+        if (model.Selected is not null && TaskList.ItemContainerGenerator.ContainerFromItem(model.Selected) is ListBoxItem item) item.Focus();
+        else if (TaskList.IsVisible) TaskList.Focus();
+        if (!TaskList.IsVisible && BackToList.IsVisible) BackToList.Focus();
+    }, DispatcherPriority.Input);
+
+    // A nested button must not trigger ListBoxItem selection on the bubbling mouse event.
+    private void CompletionMouseDown(object sender, MouseButtonEventArgs args)
+    {
+        if (args.ChangedButton == MouseButton.Left && sender is Button { Command: { } command } button)
+        {
+            if (command.CanExecute(button.CommandParameter)) command.Execute(button.CommandParameter);
+            args.Handled = true;
+        }
+    }
+    private static T? FindAncestor<T>(DependencyObject? item) where T : DependencyObject
+    {
+        while (item is not null) { if (item is T match) return match; item = item is FrameworkContentElement content ? content.Parent : VisualTreeHelper.GetParent(item); }
+        return null;
     }
     private void AdaptLayout()
     {
-        var compact = Shell.ActualWidth < 1040;
-        NavColumn.Width = compact ? new GridLength(0) : new GridLength(220);
-        NavRow.Height = compact ? GridLength.Auto : new GridLength(0);
-        Grid.SetColumn(Navigation, 0); Grid.SetColumnSpan(Navigation, compact ? 2 : 1);
-        Grid.SetRowSpan(Navigation, compact ? 1 : 2);
-        Navigation.Padding = compact ? new Thickness(24, 8, 24, 8) : new Thickness(24, 32, 24, 32);
-        Brand.Visibility = LocalNote.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
-        NavItems.Orientation = compact ? Orientation.Horizontal : Orientation.Vertical;
-        Workspace.Margin = compact ? new Thickness(24, 20, 24, 16) : new Thickness(32, 32, 32, 16);
-        var stacked = Shell.ActualWidth < 900;
-        DetailColumn.Width = stacked ? new GridLength(0) : new GridLength(1.05, GridUnitType.Star);
-        ListColumn.Width = stacked ? new GridLength(1, GridUnitType.Star) : new GridLength(0.95, GridUnitType.Star);
-        ListRow.Height = new GridLength(1, GridUnitType.Star);
-        DetailRow.Height = new GridLength(0);
-        Grid.SetColumn(DetailPane, stacked ? 0 : 1); Grid.SetRow(DetailPane, 0);
-        ListPane.Margin = stacked ? new Thickness(0) : new Thickness(0, 0, 24, 0);
+        var width = Shell.ActualWidth > 0 ? Shell.ActualWidth : Width;
+        var iconsOnly = width < 550;
+        NavColumn.Width = new GridLength(iconsOnly ? 58 : 178);
+        Navigation.Padding = iconsOnly ? new Thickness(7, 30, 6, 16) : new Thickness(12, 30, 12, 16);
+        Brand.Margin = iconsOnly ? new Thickness(0, 0, 0, 28) : new Thickness(8, 0, 0, 28);
+        BrandName.Visibility = BrandTagline.Visibility = LocalNote.Visibility = iconsOnly ? Visibility.Collapsed : Visibility.Visible;
+        foreach (var (button, label) in navigation)
+        {
+            label.Visibility = iconsOnly ? Visibility.Collapsed : Visibility.Visible;
+            button.Padding = iconsOnly ? new Thickness(0) : new Thickness(10, 8, 6, 8);
+            button.HorizontalContentAlignment = iconsOnly ? HorizontalAlignment.Center : HorizontalAlignment.Left;
+            button.MinWidth = 44;
+        }
+        var stacked = width < 850;
+        ListColumn.Width = new GridLength(1, GridUnitType.Star);
+        GapColumn.Width = new GridLength(stacked ? 0 : 20);
+        DetailColumn.Width = stacked ? new GridLength(0) : new GridLength(1, GridUnitType.Star);
+        Grid.SetColumn(DetailPane, stacked ? 0 : 2);
         BackToList.Visibility = stacked ? Visibility.Visible : Visibility.Collapsed;
-        ListPane.Visibility = stacked && model.HasSelection ? Visibility.Collapsed : Visibility.Visible;
-        DetailPane.Visibility = stacked && !model.HasSelection ? Visibility.Collapsed : Visibility.Visible;
+        ListPane.Visibility = stacked && showingDetails && model.HasSelection ? Visibility.Collapsed : Visibility.Visible;
+        DetailPane.Visibility = stacked && (!showingDetails || !model.HasSelection) ? Visibility.Collapsed : Visibility.Visible;
+        FilterBar.Visibility = model.IsHistory ? Visibility.Collapsed : Visibility.Visible;
+        if (activeNavigation is not null) activeNavigation.Background = (Brush)FindResource(model.IsHistory ? "Navigation" : "Selected");
+        if (historyNavigation is not null) historyNavigation.Background = (Brush)FindResource(model.IsHistory ? "Selected" : "Navigation");
     }
 }
