@@ -35,14 +35,18 @@ public sealed class NotificationRuntime : IDisposable
         polling = true;
         try
         {
-            var result = await Task.Run(() => (Events: service.PollPersonal(), Settings: service.ReadNotificationSettings()));
+            var result = await Task.Run(() => (Events: service.PollPersonal().Concat(service.PollSignals()).ToArray(), Settings: service.ReadNotificationSettings()));
             if (disposed) return;
             model.ClearNotificationError();
             foreach (var notification in result.Events)
             {
                 var id = notification.Subjects[0].Key.Id;
                 // A completion/deletion/snooze may have committed while the worker returned its batch.
-                if (!service.List().Any(x => x.Id == id) || service.ReadPersonal(id) is null || service.IsSnoozed(id)) continue;
+                if (notification.Kind == NotificationKind.Signal)
+                {
+                    if (!service.IsSignalCurrent(notification)) continue;
+                }
+                else if (!service.List().Any(x => x.Id == id) || service.ReadPersonal(id) is null || service.IsSnoozed(id)) continue;
                 delivery.Publish(notification, result.Settings.Sound);
             }
         }
@@ -52,6 +56,13 @@ public sealed class NotificationRuntime : IDisposable
 
     private async Task ActAsync(NotificationEvent notification, NotificationSubject subject, string action)
     {
+        if (subject.Key.Type == "signal")
+        {
+            if (action == "open") await main.OpenSignalAsync();
+            else if (action == "snooze") await Task.Run(() => service.SnoozeSignal(subject.Key.Id));
+            else throw new ArgumentException("Простой сигнал не требует выполнения.");
+            return;
+        }
         if (subject.Key.Type != "task") throw new ArgumentException("Источник действия пока не подключён.");
         switch (action)
         {

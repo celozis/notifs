@@ -66,6 +66,7 @@ public sealed class MainViewModel : Observable
     internal TaskService Service => service;
     public bool HasDeleted { get; private set; }
     public AsyncCommand RestoreDeletedCommand { get; }
+    public event Action<EntityKey>? DeletedRestored;
     private List<TaskItem> all = [];
     private TaskRow? selected;
     private bool history;
@@ -112,11 +113,16 @@ public sealed class MainViewModel : Observable
         RestoreDeletedCommand = new(async () =>
         {
             IsBusy = true;
-            Guid? id = null;
-            try { id = (await Task.Run(service.RestoreDeleted)).Id; }
+            EntityKey? restored = null;
+            try { restored = await Task.Run(service.RestoreLastDeleted); }
             catch (Exception ex) when (IsStorageError(ex)) { ShowStorageError(); }
             finally { IsBusy = false; }
-            if (id is not null) { history = false; filter = TaskFilter.All; await LoadAsync(id, true); }
+            if (restored is not null)
+            {
+                if (restored.Type == "task") { history = false; filter = TaskFilter.All; }
+                await LoadAsync(restored.Type == "task" ? restored.Id : null, true);
+                DeletedRestored?.Invoke(restored);
+            }
         }, () => HasDeleted && !IsBusy);
         ActiveCommand = new(() => SwitchAsync(false), () => !IsBusy);
         HistoryCommand = new(() => SwitchAsync(true), () => !IsBusy);
@@ -139,7 +145,7 @@ public sealed class MainViewModel : Observable
             var items = await Task.Run(() =>
             {
                 if (!initialized) { service.Initialize(); initialized = true; }
-                HasDeleted = service.DeletedTitle is not null;
+                HasDeleted = service.DeletedKind is not null;
                 return service.ListAll();
             });
             var id = selectId ?? Selected?.Item.Id;
@@ -213,7 +219,7 @@ public sealed class MainViewModel : Observable
         history = false; filter = TaskFilter.All;
         await LoadAsync(id, true);
     }
-    private const string NotificationError = "Не удалось обработать личные напоминания. Проверьте доступ к папке данных; повторим автоматически.";
+    private const string NotificationError = "Не удалось обработать напоминания. Проверьте доступ к папке данных; повторим автоматически.";
     internal void ReportNotificationError() { if (!HasError || Error == NotificationError) Error = NotificationError; }
     internal void ClearNotificationError() { if (Error == NotificationError) Error = ""; }
     public async Task<bool> DeleteAsync(Guid id)
