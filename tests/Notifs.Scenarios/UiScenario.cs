@@ -12,13 +12,13 @@ namespace Notifs.Scenarios;
 
 internal static partial class UiScenario
 {
-    public static int Run(Application app, string databasePath, bool fieldsOnly = false, bool draftsOnly = false, bool notificationsOnly = false, bool signalsOnly = false, bool recurringOnly = false, bool summaryOnly = false)
+    public static int Run(Application app, string databasePath, bool fieldsOnly = false, bool draftsOnly = false, bool notificationsOnly = false, bool signalsOnly = false, bool recurringOnly = false, bool summaryOnly = false, bool listsOnly = false, bool calendarOnly = false)
     {
         var result = 1;
         app.ShutdownMode = ShutdownMode.OnExplicitShutdown;
         app.Dispatcher.InvokeAsync(async () =>
         {
-            try { if (summaryOnly) await RunSummaryAsync(databasePath); else if (recurringOnly) await RunRecurringAsync(databasePath); else if (signalsOnly) await RunSignalsAsync(databasePath); else if (notificationsOnly) await RunNotificationsAsync(databasePath); else if (draftsOnly) await RunDraftsAsync(databasePath); else if (fieldsOnly) await RunFieldsAsync(databasePath); else { await RunAsync(databasePath); await RunDraftsAsync(databasePath + ".drafts"); await RunNotificationsAsync(databasePath + ".notifications"); await RunSignalsAsync(databasePath + ".signals"); await RunRecurringAsync(databasePath + ".recurring"); await RunSummaryAsync(databasePath + ".summary"); } result = 0; Console.WriteLine("PASS all requested WPF scenarios"); }
+            try { if (calendarOnly) await RunCalendarAsync(databasePath); else if (listsOnly) await RunTaskListsAsync(databasePath); else if (summaryOnly) await RunSummaryAsync(databasePath); else if (recurringOnly) await RunRecurringAsync(databasePath); else if (signalsOnly) await RunSignalsAsync(databasePath); else if (notificationsOnly) await RunNotificationsAsync(databasePath); else if (draftsOnly) await RunDraftsAsync(databasePath); else if (fieldsOnly) await RunFieldsAsync(databasePath); else { await RunTaskListsAsync(databasePath + ".lists"); await RunCalendarAsync(databasePath + ".calendar"); await RunAsync(databasePath); await RunDraftsAsync(databasePath + ".drafts"); await RunNotificationsAsync(databasePath + ".notifications"); await RunSignalsAsync(databasePath + ".signals"); await RunRecurringAsync(databasePath + ".recurring"); await RunSummaryAsync(databasePath + ".summary"); } result = 0; Console.WriteLine("PASS all requested WPF scenarios"); }
             catch (Exception ex) { Console.Error.WriteLine(ex); }
             finally { app.Shutdown(); }
         });

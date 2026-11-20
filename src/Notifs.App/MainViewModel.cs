@@ -20,6 +20,7 @@ public sealed class TaskRow(TaskItem item, TaskService service) : Observable
     private TaskTiming timing = service.Timing(item);
     public ImportanceRank Rank => Item.Rank;
     public string Title => Item.Title;
+    public string CalendarReasons { get; init; } = "";
     public string Description => Item.Description;
     public bool IsCompleted => Item.CompletedAt is not null;
     public bool IsIncomplete => !IsCompleted;
@@ -60,7 +61,7 @@ public sealed class TaskRow(TaskItem item, TaskService service) : Observable
 
 public enum TaskFilter { All, Incomplete, Completed }
 
-public sealed class MainViewModel : Observable
+public sealed partial class MainViewModel : Observable
 {
     private readonly TaskService service;
     internal TaskService Service => service;
@@ -88,8 +89,8 @@ public sealed class MainViewModel : Observable
     public string IncompleteLabel => $"Не сделаны {all.Count(x => x.CompletedAt is null)}";
     public string CompletedLabel => $"Сделаны {all.Count(x => x.CompletedAt is not null)}";
     public bool IsBusy { get => busy; private set { busy = value; Changed(); CommandManager.InvalidateRequerySuggested(); } }
-    public string PageTitle => history ? "История" : "Мои задачи";
-    public string Subtitle => history ? "Всё, что уже получилось сделать." : "Список слева. Внимание — на одном деле.";
+    public string PageTitle => calendar ? Calendar.IsMonth ? "Календарь целиком" : "Календарь" : history ? "История" : "Мои задачи";
+    public string Subtitle => calendar ? Calendar.IsMonth ? "Выберите день, чтобы увидеть связанные задачи." : "Неделя рядом с задачами. Полный месяц — в один клик." : history ? "Всё, что уже получилось сделать." : "Список слева. Внимание — на одном деле.";
     public string CountLabel => $"ЗАДАЧИ · {Tasks.Count}";
     public string EmptyTitle => history ? "Здесь будут ваши результаты" : "Пока нет задач";
     public string EmptyMessage => history ? "Выполненные задачи появятся здесь. Любую можно вернуть в работу." : "Создайте задачу или выберите другой фильтр.";
@@ -146,15 +147,17 @@ public sealed class MainViewModel : Observable
             {
                 if (!initialized) { service.Initialize(); initialized = true; }
                 HasDeleted = service.DeletedKind is not null;
+                Settings = service.ReadTaskListSettings(Section);
+                filter = (TaskFilter)Settings.Status;
                 return service.ListAll();
             });
             var id = selectId ?? Selected?.Item.Id;
-            all = items.ToList();
+            all = service.ApplyTaskList(PeriodTasks(items), Settings with { Status = TaskStatusFilter.All }).ToList();
             if (reapplyFilter || Tasks.Count == 0)
             {
                 heldPositions.Clear();
                 Tasks.Clear();
-                foreach (var item in all.Where(MatchesFilter)) Tasks.Add(new(item, service));
+                foreach (var item in all.Where(MatchesFilter)) Tasks.Add(new(item, service) { CalendarReasons = calendar ? MainWindow.ReasonLabel(service.ReasonsFor(item, Calendar.Period)) : "" });
             }
             else
             {
@@ -170,20 +173,21 @@ public sealed class MainViewModel : Observable
             Selected = Tasks.FirstOrDefault(row => row.Item.Id == id) ?? Tasks.FirstOrDefault();
             Status = "Все изменения сохранены на этом компьютере";
             RefreshLabels();
+            Changed(nameof(SortLabel)); Changed(nameof(IsCalendar)); CalendarChanged?.Invoke();
             Changed(nameof(HasDeleted));
         }
         catch (Exception ex) when (IsStorageError(ex)) { ShowStorageError(); }
         finally { IsBusy = false; }
     }
 
-    private bool MatchesFilter(TaskItem item) => history ? item.CompletedAt is not null : filter switch
+    private bool MatchesFilter(TaskItem item) => filter switch
     {
         TaskFilter.Incomplete => item.CompletedAt is null,
         TaskFilter.Completed => item.CompletedAt is not null,
         _ => true
     };
-    private async Task SetFilterAsync(TaskFilter value) { filter = value; await LoadAsync(reapplyFilter: true); }
-    private async Task SwitchAsync(bool showHistory) { history = showHistory; await LoadAsync(reapplyFilter: true); }
+    private async Task SetFilterAsync(TaskFilter value) { await ApplySettingsAsync(Settings with { Status = (TaskStatusFilter)value }); }
+    private async Task SwitchAsync(bool showHistory) { history = showHistory; calendar = false; await LoadAsync(reapplyFilter: true); }
 
     private async Task ChangeStateAsync(TaskRow row, bool restore)
     {
@@ -198,6 +202,8 @@ public sealed class MainViewModel : Observable
             if (Tasks.Contains(row)) heldPositions.TryAdd(row.Item.Id, Tasks.IndexOf(row));
             var index = all.FindIndex(x => x.Id == updated.Id);
             if (index >= 0) all[index] = updated;
+            calendarSource = calendarSource.Select(item => item.Id == updated.Id ? updated : item).ToArray();
+            CalendarChanged?.Invoke();
             RefreshLabels();
             Status = restore ? "Задача возвращена в работу" : "Задача выполнена";
         }
@@ -216,13 +222,14 @@ public sealed class MainViewModel : Observable
     }
     public async Task SelectTaskAsync(Guid id)
     {
-        history = false; filter = TaskFilter.All;
+        history = false; calendar = false;
         await LoadAsync(id, true);
     }
 
     public async Task OpenTaskListAsync()
     {
         history = false;
+        calendar = false;
         await LoadAsync(reapplyFilter: true);
     }
     private const string NotificationError = "Не удалось обработать напоминания. Проверьте доступ к папке данных; повторим автоматически.";
@@ -240,14 +247,14 @@ public sealed class MainViewModel : Observable
     }
     public async Task EditorSavedAsync(Guid id, bool created)
     {
-        if (created) { history = false; filter = TaskFilter.All; }
-        await LoadAsync(id, created);
+        if (created && !calendar) { history = false; }
+        await LoadAsync(id, true);
     }
     public void RefreshTime()
     {
         if (IsBusy && all.Count == 0) return;
         foreach (var row in Tasks) row.Update(row.Item);
-        var available = service.Order(Tasks.Where(x => !heldPositions.ContainsKey(x.Item.Id)).Select(x => x.Item))
+        var available = service.OrderTaskList(Tasks.Where(x => !heldPositions.ContainsKey(x.Item.Id)).Select(x => x.Item), Settings)
             .Select(item => Tasks.Single(row => row.Item.Id == item.Id)).ToList();
         foreach (var row in Tasks.Where(x => heldPositions.ContainsKey(x.Item.Id)).OrderBy(x => heldPositions[x.Item.Id]))
             available.Insert(Math.Min(heldPositions[row.Item.Id], available.Count), row);
