@@ -12,7 +12,9 @@ public sealed class NotificationRuntime : IDisposable
     private readonly NativeNotificationOutput output;
     private readonly NotificationDelivery delivery;
     private readonly DispatcherTimer timer = new() { Interval = TimeSpan.FromSeconds(1) };
-    private bool polling, disposed;
+    private bool polling, disposed, stopping;
+    private int activeActions;
+    public bool IsBusy => polling || activeActions != 0;
 
     public NotificationRuntime(TaskService service, MainViewModel model, MainWindow main, NativeNotificationOutput? output = null)
     {
@@ -28,11 +30,16 @@ public sealed class NotificationRuntime : IDisposable
         timer.Tick += async (_, _) => await RunOnceAsync();
         main.Closed += MainClosed;
     }
-    public void Start() => timer.Start();
+    public void Start() { stopping = false; timer.Start(); }
+    public async Task SuspendAsync()
+    {
+        stopping = true; timer.Stop();
+        while (IsBusy) await Task.Delay(20);
+    }
 
     public async Task RunOnceAsync()
     {
-        if (disposed || polling || model.IsBusy) return;
+        if (disposed || stopping || polling || model.IsBusy) return;
         polling = true;
         try
         {
@@ -62,6 +69,14 @@ public sealed class NotificationRuntime : IDisposable
     }
 
     private async Task ActAsync(NotificationEvent notification, NotificationSubject subject, string action)
+    {
+        if (disposed || stopping) throw new System.IO.IOException("Приложение завершает работу. Повторите действие после открытия.");
+        activeActions++;
+        try { await ApplyActionAsync(notification, subject, action); }
+        finally { activeActions--; }
+    }
+
+    private async Task ApplyActionAsync(NotificationEvent notification, NotificationSubject subject, string action)
     {
         if (notification.Kind == NotificationKind.Summary && action == "open-tasks")
         { await main.OpenTasksAsync(); delivery.Hide(notification.Id); return; }

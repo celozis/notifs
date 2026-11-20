@@ -2,6 +2,8 @@ using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using System.Windows.Input;
+using System.Windows.Automation;
 using System.Windows.Threading;
 using Microsoft.Data.Sqlite;
 using Microsoft.Win32;
@@ -40,11 +42,16 @@ internal static class BackgroundUiScenario
         var model = new MainViewModel(service);
         var main = new MainWindow(model);
         main.Show(); await Wait(() => !model.IsBusy);
+        await BackgroundProcessScenarios.CheckForegroundAsync(main, Path.Combine(directory, "foreground"));
         var startup = new WindowsAutoStart(key: key);
         var settings = new SettingsViewModel(service, startup);
         var view = new SettingsView(settings);
         main.SettingsCommand.Execute(null);
         ((ContentControl)main.FindName("SettingsHost")).Content = view;
+        await Idle();
+        var sound = VisualChildren<CheckBox>(view).Single(x => AutomationProperties.GetName(x) == "Короткий негромкий звук");
+        sound.Focus(); sound.MoveFocus(new TraversalRequest(FocusNavigationDirection.Next)); await Idle();
+        Check(Keyboard.FocusedElement is CheckBox next && AutomationProperties.GetName(next) == "Показывать сводку", "Tab visits summary before the lower background section");
         settings.StartWithWindows = true;
         Check(!startup.IsEnabled, "startup checkbox remains a draft until explicit save");
         settings.SaveCommand.Execute(null); await Wait(() => !settings.IsBusy);
@@ -109,13 +116,24 @@ internal static class BackgroundUiScenario
         Check(output.VisibleEvents.Count == 1, "snoozed personal notification returns while scheduler is running");
         service.SnoozePersonal(task.Id);
         var snoozed = service.ReadPersonal(task.Id)!.SnoozedUntil;
-        service.SaveEditor(null, "Вторая видимая карточка перед выходом", "", null, null, ImportanceRank.B, new(DateOnly.FromDateTime(local.DateTime), TimeOnly.FromDateTime(local.DateTime)));
+        var secondTask = service.SaveEditor(null, "Вторая видимая карточка перед выходом", "", null, null, ImportanceRank.B, new(DateOnly.FromDateTime(local.DateTime), TimeOnly.FromDateTime(local.DateTime)));
         await Idle(); await runtime.RunOnceAsync();
         Check(output.VisibleEvents.Count == 1, "exit starts with a visible native stack and a separately snoozed task");
-        Check(lifetime.Exit() && exited && output.VisibleEvents.Count == 0, "explicit exit closes main window and native stack");
+        using (var lockConnection = new SqliteConnection($"Data Source={database}"))
+        {
+            lockConnection.Open(); using var command = lockConnection.CreateCommand(); command.CommandText = "BEGIN IMMEDIATE"; command.ExecuteNonQuery();
+            var snooze = VisualChildren<Button>(output.Window).Single(x => x.Content is string text && text.StartsWith("Отложить на"));
+            snooze.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            var exit = lifetime.ExitAsync();
+            await Task.Delay(100);
+            Check(!exit.IsCompleted && !exited, "exit waits for a notification action blocked by a real SQLite transaction");
+            command.CommandText = "COMMIT"; command.ExecuteNonQuery();
+            Check(await exit && exited && output.VisibleEvents.Count == 0, "explicit exit closes main window and native stack after pending actions commit");
+        }
         var reopened = new TaskService(database, clock); reopened.Initialize();
         Check(reopened.List().Any(x => x.Id == task.Id) && reopened.ReadPersonal(task.Id)!.SnoozedUntil == snoozed && reopened.ReadDraft(null)?.Title == editor.Title,
             "full exit preserves tasks, schedules, snooze and drafts across SQLite reopen");
+        Check(reopened.ReadPersonal(secondTask.Id)!.SnoozedUntil == clock.GetUtcNow().AddMinutes(30), "notification snooze immediately before exit persists across reopen");
         clock.Advance(TimeSpan.FromHours(1)); await runtime.RunOnceAsync();
         Check(output.VisibleEvents.Count == 0, "disposed scheduler cannot deliver after explicit exit");
     }

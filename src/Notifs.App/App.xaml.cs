@@ -38,7 +38,7 @@ public partial class App : Application
     }
     protected override void OnSessionEnding(SessionEndingCancelEventArgs e)
     {
-        if (lifetime?.Exit() == false) e.Cancel = true;
+        if (lifetime?.TryExit() == false) e.Cancel = true;
         base.OnSessionEnding(e);
     }
 }

@@ -14,7 +14,7 @@ public sealed class DesktopLifetime : IDisposable
     private readonly Forms.ContextMenuStrip menu = new();
     private readonly System.Drawing.Icon icon;
     private readonly Action shutdown;
-    private bool exiting, closed, disposed;
+    private bool exiting, closed, disposed, waitingForExit;
 
     public DesktopLifetime(MainWindow main, NotificationRuntime notifications, Action shutdown)
     {
@@ -22,7 +22,7 @@ public sealed class DesktopLifetime : IDisposable
         icon = new System.Drawing.Icon(Path.Combine(AppContext.BaseDirectory, "Assets", "notifs.ico"));
         menu.Items.Add("Открыть Notifs", null, (_, _) => Show());
         menu.Items.Add(new Forms.ToolStripSeparator());
-        menu.Items.Add("Выход", null, (_, _) => Exit());
+        menu.Items.Add("Выход", null, async (_, _) => await ExitAsync());
         tray = new Forms.NotifyIcon { Text = "Notifs — задачи и напоминания", Icon = icon, ContextMenuStrip = menu, Visible = true };
         tray.MouseClick += (_, args) => { if (args.Button == Forms.MouseButtons.Left) Show(); };
         main.Closing += Closing;
@@ -41,9 +41,21 @@ public sealed class DesktopLifetime : IDisposable
         args.Cancel = true;
         main.Hide();
     }
-    public bool Exit()
+    public async Task<bool> ExitAsync()
     {
         if (closed) return true;
+        if (waitingForExit) return false;
+        waitingForExit = true;
+        await notifications.SuspendAsync();
+        var result = TryExit();
+        if (!result) notifications.Start();
+        waitingForExit = false;
+        return result;
+    }
+    public bool TryExit()
+    {
+        if (closed) return true;
+        if (notifications.IsBusy) return false;
         exiting = true;
         main.Close();
         if (!closed) { exiting = false; Show(); return false; }

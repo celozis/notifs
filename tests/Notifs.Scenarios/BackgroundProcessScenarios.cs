@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Windows;
 using Notifs.Core;
 
 namespace Notifs.Scenarios;
@@ -72,6 +73,44 @@ internal static class BackgroundProcessScenarios
         try { service.ListAll(); return true; }
         catch (Microsoft.Data.Sqlite.SqliteException) { return false; }
     }
+    internal static async Task CheckForegroundAsync(Window typing, string directory)
+    {
+        var executable = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../../../src/Notifs.App/bin/Release/net10.0-windows/Notifs.App.exe"));
+        Process Launch(string arguments)
+        {
+            var start = new ProcessStartInfo(executable, arguments) { UseShellExecute = false, WindowStyle = ProcessWindowStyle.Hidden };
+            start.Environment["NOTIFS_DATA_DIR"] = directory;
+            start.Environment["DOTNET_ROOT"] = Path.GetDirectoryName(Environment.ProcessPath)!;
+            return Process.Start(start)!;
+        }
+        using var owner = Launch("--background");
+        try
+        {
+            var service = new TaskService(Path.Combine(directory, "notifs.db"));
+            var timeout = Stopwatch.StartNew();
+            while (!CanRead(service)) { if (timeout.ElapsedMilliseconds > 15000) throw new TimeoutException("background owner not ready"); await Task.Delay(25); }
+            typing.Activate();
+            var typingHandle = new System.Windows.Interop.WindowInteropHelper(typing).Handle;
+            // Test setup: give the launcher its own foreground window so Windows can grant
+            // the newly started secondary the same rights as a user launching from Explorer.
+            var foregroundThread = GetWindowThreadProcessId(GetForegroundWindow(), out _);
+            var testThread = GetCurrentThreadId();
+            if (foregroundThread != testThread) AttachThreadInput(testThread, foregroundThread, true);
+            try { SetForegroundWindow(typingHandle); }
+            finally { if (foregroundThread != testThread) AttachThreadInput(testThread, foregroundThread, false); }
+            if (GetForegroundWindow() != typingHandle) throw new Exception("foreground test requires its independent typing window to have focus");
+            using var secondary = Launch("");
+            timeout.Restart();
+            while (!secondary.HasExited || FindVisible(owner.Id, "Notifs — задачи") == 0 || FindVisible(owner.Id, "Notifs — задачи") != GetForegroundWindow())
+            { if (timeout.ElapsedMilliseconds > 15000) throw new TimeoutException("secondary did not transfer foreground to the owner"); await Task.Delay(25); }
+            Console.WriteLine("PASS real secondary launch transfers foreground from the independent typing window to the original process");
+        }
+        finally { if (!owner.HasExited) { owner.Kill(entireProcessTree: true); owner.WaitForExit(); } }
+    }
+    [DllImport("user32.dll")] private static extern nint GetForegroundWindow();
+    [DllImport("user32.dll")] private static extern bool SetForegroundWindow(nint window);
+    [DllImport("user32.dll")] private static extern bool AttachThreadInput(uint first, uint second, bool attach);
+    [DllImport("kernel32.dll")] private static extern uint GetCurrentThreadId();
     [DllImport("user32.dll")] private static extern bool PostMessage(nint window, uint message, nint wParam, nint lParam);
     [DllImport("user32.dll")] private static extern bool IsWindowVisible(nint window);
     private static nint FindVisible(int processId, string title)
