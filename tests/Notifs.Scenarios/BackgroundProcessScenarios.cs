@@ -11,14 +11,10 @@ internal static class BackgroundProcessScenarios
 {
     public static void Run(string directory)
     {
-        var executable = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../../../src/Notifs.App/bin/Release/net10.0-windows/Notifs.App.exe"));
         var children = new List<Process>();
         Process Launch(string arguments = "")
         {
-            var start = new ProcessStartInfo(executable, arguments) { UseShellExecute = false, WindowStyle = ProcessWindowStyle.Hidden };
-            start.Environment["NOTIFS_DATA_DIR"] = directory;
-            start.Environment["DOTNET_ROOT"] = Path.GetDirectoryName(Environment.ProcessPath)!;
-            var child = Process.Start(start)!;
+            var child = StartApp(directory, arguments);
             children.Add(child);
             return child;
         }
@@ -75,15 +71,7 @@ internal static class BackgroundProcessScenarios
     }
     internal static async Task CheckForegroundAsync(Window typing, string directory)
     {
-        var executable = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../../../src/Notifs.App/bin/Release/net10.0-windows/Notifs.App.exe"));
-        Process Launch(string arguments)
-        {
-            var start = new ProcessStartInfo(executable, arguments) { UseShellExecute = false, WindowStyle = ProcessWindowStyle.Hidden };
-            start.Environment["NOTIFS_DATA_DIR"] = directory;
-            start.Environment["DOTNET_ROOT"] = Path.GetDirectoryName(Environment.ProcessPath)!;
-            return Process.Start(start)!;
-        }
-        using var owner = Launch("--background");
+        using var owner = StartApp(directory, "--background");
         try
         {
             var service = new TaskService(Path.Combine(directory, "notifs.db"));
@@ -99,13 +87,24 @@ internal static class BackgroundProcessScenarios
             try { SetForegroundWindow(typingHandle); }
             finally { if (foregroundThread != testThread) AttachThreadInput(testThread, foregroundThread, false); }
             if (GetForegroundWindow() != typingHandle) throw new Exception("foreground test requires its independent typing window to have focus");
-            using var secondary = Launch("");
+            using var secondary = StartApp(directory);
             timeout.Restart();
             while (!secondary.HasExited || FindVisible(owner.Id, "Notifs — задачи") == 0 || FindVisible(owner.Id, "Notifs — задачи") != GetForegroundWindow())
             { if (timeout.ElapsedMilliseconds > 15000) throw new TimeoutException("secondary did not transfer foreground to the owner"); await Task.Delay(25); }
             Console.WriteLine("PASS real secondary launch transfers foreground from the independent typing window to the original process");
         }
         finally { if (!owner.HasExited) { owner.Kill(entireProcessTree: true); owner.WaitForExit(); } }
+    }
+    private static Process StartApp(string directory, string arguments = "")
+    {
+        var executable = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../../../src/Notifs.App/bin/Release/net10.0-windows/Notifs.App.exe"));
+        var start = new ProcessStartInfo(executable, arguments) { UseShellExecute = false, WindowStyle = ProcessWindowStyle.Hidden };
+        start.Environment["NOTIFS_DATA_DIR"] = directory;
+        // Works when the scenario itself is launched by dotnet.exe or by its own apphost.
+        var runtimeRoot = Directory.GetParent(RuntimeEnvironment.GetRuntimeDirectory().TrimEnd(Path.DirectorySeparatorChar))?.Parent?.Parent?.FullName;
+        if (runtimeRoot is not null && File.Exists(Path.Combine(runtimeRoot, "dotnet.exe")))
+        { start.Environment["DOTNET_ROOT"] = runtimeRoot; start.Environment["DOTNET_ROOT_X64"] = runtimeRoot; }
+        return Process.Start(start)!;
     }
     [DllImport("user32.dll")] private static extern nint GetForegroundWindow();
     [DllImport("user32.dll")] private static extern bool SetForegroundWindow(nint window);
