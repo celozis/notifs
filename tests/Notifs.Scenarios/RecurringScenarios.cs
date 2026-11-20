@@ -99,10 +99,18 @@ internal static class RecurringScenarios
         service.CompleteRecurring(deletedDebt.Id);
         var planned = service.ListReminderCalendar(clock.GetUtcNow(), clock.GetUtcNow().AddDays(100)).Where(x => x.Kind == ReminderCalendarKind.Planned).ToArray();
         Check(planned.Length == 1 && planned[0].DueAt == new DateTimeOffset(2027, 2, 9, 12, 45, 0, TimeSpan.Zero), "two-hour completion interval projects only its nearest known future date");
+        item = service.SaveSignal(item.Id, item.Title, "", hours with { IntervalValue = 1 }, true, true);
+        Check(item.Current is null && item.NextAt == new DateTimeOffset(2027, 2, 9, 11, 45, 0, TimeSpan.Zero),
+            "editing an interval after completion recalculates from actual completion without reviving its old first date");
         var hourly = weekly with { Repeat = SignalRepeat.Hourly, HourlyMinute = 25 };
         var fixedItem = service.SaveSignal(null, "Фиксированное дело", "", hourly, true, true);
         var future = service.ListReminderCalendar(clock.GetUtcNow(), clock.GetUtcNow().AddHours(3)).Where(x => x.ScheduleId == fixedItem.Id && x.Kind == ReminderCalendarKind.Planned).ToArray();
         Check(future.Length == 3 && future[0].DueAt == new DateTimeOffset(2027, 2, 9, 11, 25, 0, TimeSpan.Zero), "fixed hourly calendar exposes planned dates despite one outstanding debt");
+        service.SetSignalEnabled(item.Id, false); service.SetSignalEnabled(fixedItem.Id, false);
+        var disabledPlanned = service.ListReminderCalendar(clock.GetUtcNow(), clock.GetUtcNow().AddHours(3)).Where(x => x.Kind == ReminderCalendarKind.Planned).ToArray();
+        Check(disabledPlanned.Count(x => x.ScheduleId == fixedItem.Id) == 3 && disabledPlanned.Count(x => x.ScheduleId == item.Id) == 1,
+            "disabling stops notifications while calendar retains known fixed and interval planned dates");
+        service.SetSignalEnabled(fixedItem.Id, true);
         var signal = service.SaveSignal(fixedItem.Id, fixedItem.Title, "", hourly, true, confirmClearDebt: true);
         Check(signal.NextAt == new DateTimeOffset(2027, 2, 9, 11, 25, 0, TimeSpan.Zero), "conversion of an unchanged fixed rule to a signal skips old recurring debt rather than replaying it");
 

@@ -1,4 +1,5 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:local="clr-namespace:Notifs.App">
+  <SolidColorBrush x:Key="ModalScrim" Color="#BF000000" />
   <SolidColorBrush x:Key="Primary" Color="#E5B666" />
   <SolidColorBrush x:Key="PrimaryHover" Color="#F0C57F" />
   <SolidColorBrush x:Key="PrimaryPressed" Color="#D5A656" />

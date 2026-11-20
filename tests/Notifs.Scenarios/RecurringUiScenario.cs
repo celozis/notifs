@@ -89,12 +89,14 @@ internal static partial class UiScenario
         reminders.EditCommand.Execute(row); await IdleAsync();
         reminders.ModeIndex = 0; reminders.RepeatIndex = 1; reminders.Minute = "25";
         reminders.Description = "Сохранить введённый текст";
+        var conversionInitiator = Keyboard.FocusedElement;
         reminders.SaveCommand.Execute(null); await UntilAsync(() => !reminders.IsBusy); await IdleAsync();
         Assert(reminders.HasModeConfirmation && ReferenceEquals(Keyboard.FocusedElement, view.FindName("KeepMode")) && !main.NewCommand.CanExecute(null), "mode conversion opens focused confirmation and blocks background navigation");
         SaveImage(main, "issue-6-mode-confirmation.png");
         main.InputBindings.OfType<KeyBinding>().Single(x => x.Key == Key.Escape).Command.Execute(null); await IdleAsync();
         Assert(!reminders.HasModeConfirmation && reminders.IsEditing && reminders.Description.Contains("введённый") && service.ListSignals().Single().RequiresCompletion,
             "Escape declines mode conversion, preserving saved rule and entered form");
+        Assert(ReferenceEquals(Keyboard.FocusedElement, conversionInitiator), "canceling mode confirmation restores focus to the initiating field");
         reminders.SaveCommand.Execute(null); await UntilAsync(() => !reminders.IsBusy); await IdleAsync();
         reminders.ConfirmModeCommand.Execute(null); await UntilAsync(() => !reminders.IsBusy && !model.IsBusy && reminders.IsList);
         Assert(!service.ListSignals().Single().RequiresCompletion && service.ListSignals().Single().Current is null && service.ListSignals().Single().History.Count == 1, "explicit confirmation removes current debt and preserves historical completion");

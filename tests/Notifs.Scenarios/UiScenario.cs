@@ -259,7 +259,8 @@ internal static partial class UiScenario
         using (var drawing = visual.RenderOpen()) drawing.DrawRectangle(new VisualBrush(root)
         {
             ViewboxUnits = BrushMappingMode.Absolute,
-            Viewbox = new Rect(0, 0, root.ActualWidth, root.ActualHeight),
+            // VisualBrush includes the root's LayoutTransform already; sampling unscaled bounds magnifies it twice.
+            Viewbox = new Rect(0, 0, bitmap.PixelWidth, bitmap.PixelHeight),
             Stretch = Stretch.Fill
         }, null, new Rect(0, 0, bitmap.PixelWidth, bitmap.PixelHeight));
         Trace("render");

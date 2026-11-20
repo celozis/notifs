@@ -48,9 +48,7 @@ public sealed partial class TaskService
         var previous = id is { } key ? ReadSignal(connection, transaction, key) : null;
         if (!requiresCompletion && previous?.Current is not null && !confirmClearDebt) throw new DebtConfirmationRequiredException();
         var unchanged = previous is { Enabled: true } && previous.RequiresCompletion == requiresCompletion && previous.Schedule.SameRule(schedule);
-        var sameRecurringRule = requiresCompletion && previous is { RequiresCompletion: true } && previous.Schedule.SameRule(schedule);
-        var next = requiresCompletion ? sameRecurringRule ? previous!.NextAt : schedule.Next(new TaskDeadline(schedule.FirstDate, schedule.FirstTime).Resolve(time.LocalTimeZone), time.LocalTimeZone, true)
-            : !enabled ? null : unchanged ? previous!.NextAt : schedule.Next(time.GetUtcNow(), time.LocalTimeZone, previous is null);
+        var next = NextSavedReminder(previous, schedule, requiresCompletion, enabled);
         var item = new SignalReminder(id ?? Guid.NewGuid(), title.Trim(), description, schedule, enabled, next,
             requiresCompletion && previous?.Current is not null ? previous.SnoozedUntil : enabled && unchanged ? previous!.SnoozedUntil : null, Guid.NewGuid(),
             requiresCompletion, repeatMinutes, requiresCompletion ? previous?.Current : null, previous?.Completions);
@@ -60,6 +58,26 @@ public sealed partial class TaskService
         TaskNotificationsChanged?.Invoke(new("signal", item.Id), false);
         if (previous?.Current is { } oldDebt) TaskNotificationsChanged?.Invoke(new("recurring", oldDebt.Id), false);
         return item;
+    }
+
+    private DateTimeOffset? NextSavedReminder(SignalReminder? previous, SignalSchedule schedule, bool requiresCompletion, bool enabled)
+    {
+        if (!requiresCompletion)
+        {
+            if (!enabled) return null;
+            if (previous is { Enabled: true, RequiresCompletion: false } && previous.Schedule.SameRule(schedule)) return previous.NextAt;
+            return schedule.Next(time.GetUtcNow(), time.LocalTimeZone, previous is null);
+        }
+        if (previous is { RequiresCompletion: true })
+        {
+            if (previous.Schedule.SameRule(schedule)) return previous.NextAt;
+            // A changed rule starts the next cycle after the last actual completion, never at a consumed first date.
+            if (previous.History.LastOrDefault() is { } last)
+                return schedule.Repeat == SignalRepeat.AfterCompletion ? last.CompletedAt.Add(schedule.CompletionInterval)
+                    : schedule.Next(last.CompletedAt, time.LocalTimeZone);
+        }
+        var first = new TaskDeadline(schedule.FirstDate, schedule.FirstTime).Resolve(time.LocalTimeZone);
+        return schedule.Next(first, time.LocalTimeZone, true);
     }
 
     public SignalReminder SetSignalEnabled(Guid id, bool enabled)
