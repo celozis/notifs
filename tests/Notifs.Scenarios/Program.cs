@@ -24,6 +24,14 @@ internal static class Program
         var directory = Path.Combine(Path.GetTempPath(), "Notifs.Scenarios", Guid.NewGuid().ToString("N"));
         try
         {
+            CalendarScenarios.Run(directory);
+            if (args.Contains("--calendar")) return 0;
+            TaskListScenarios.Run(directory);
+            if (args.Contains("--lists")) return 0;
+            if (args.Contains("--lists-ui") || args.Contains("--calendar-ui")) {
+                var targetedApp = new Application(); targetedApp.Resources.MergedDictionaries.Add(new ResourceDictionary { Source = new Uri("/Notifs.App;component/Theme.xaml", UriKind.Relative) });
+                return UiScenario.Run(targetedApp, Path.Combine(directory, "target-ui.db"), listsOnly: args.Contains("--lists-ui"), calendarOnly: args.Contains("--calendar-ui"));
+            }
             SummaryScenarios.Run(directory);
             if (args.Contains("--summary")) return 0;
             if (args.Contains("--recurring")) { RecurringScenarios.Run(directory); return 0; }
@@ -98,7 +106,7 @@ internal static class Program
             editor.SaveCommand.Execute(null); // Invalid title is synchronous, no dispatcher pump needed.
             Check(editor.HasError && editor.Description == markdown && reopened.ListAll().Count == 2, "invalid UI submission retains Markdown and creates nothing");
             Console.WriteLine("All application and rendering checks passed.");
-            return UiScenario.Run(app, Path.Combine(directory, "ui.db"), args.Contains("--fields-ui"), args.Contains("--drafts-ui"), args.Contains("--notifications-ui"), args.Contains("--signals-ui"), args.Contains("--recurring-ui"), args.Contains("--summary-ui"));
+            return UiScenario.Run(app, Path.Combine(directory, "ui.db"), args.Contains("--fields-ui"), args.Contains("--drafts-ui"), args.Contains("--notifications-ui"), args.Contains("--signals-ui"), args.Contains("--recurring-ui"), args.Contains("--summary-ui"), args.Contains("--lists-ui"));
         }
         catch (Exception ex) { Console.Error.WriteLine(ex); return 1; }
         finally
