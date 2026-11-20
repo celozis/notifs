@@ -11,7 +11,7 @@ public sealed class NotificationDelivery(INotificationOutput output, TimeProvide
 {
     private readonly TimeProvider time = clock ?? TimeProvider.System;
     private readonly List<NotificationEvent> visible = [];
-    private readonly List<(NotificationEvent Event, bool Sound)> waiting = [];
+    private readonly List<NotificationEvent> waiting = [];
     private bool hovered;
     private readonly HashSet<Guid> received = [];
     private DateTimeOffset? lastSound;
@@ -19,13 +19,14 @@ public sealed class NotificationDelivery(INotificationOutput output, TimeProvide
     public void Publish(NotificationEvent notification, bool sound)
     {
         if (notification.Subjects.Count == 0 || !received.Add(notification.Id)) return;
+        SoundOnArrival(sound);
         if (hovered)
         {
-            waiting.Add((notification, sound));
+            waiting.Add(notification);
             if (waiting.Count > 2) waiting.RemoveAt(0);
             return;
         }
-        Show(notification, sound);
+        Show(notification);
     }
 
     public void SetHovered(bool value)
@@ -34,14 +35,18 @@ public sealed class NotificationDelivery(INotificationOutput output, TimeProvide
         if (value) return;
         var pending = waiting.ToArray();
         waiting.Clear();
-        foreach (var item in pending) Show(item.Event, item.Sound);
+        foreach (var item in pending) Show(item);
     }
 
-    private void Show(NotificationEvent notification, bool sound)
+    private void Show(NotificationEvent notification)
     {
         visible.Add(notification);
         if (visible.Count > 2) visible.RemoveAt(0);
         output.Render(visible.ToArray());
+    }
+
+    private void SoundOnArrival(bool sound)
+    {
         var now = time.GetUtcNow();
         if (sound && (lastSound is null || now - lastSound >= TimeSpan.FromSeconds(1)))
         { lastSound = now; output.PlaySound(); }
@@ -49,7 +54,7 @@ public sealed class NotificationDelivery(INotificationOutput output, TimeProvide
 
     public void Hide(Guid id)
     {
-        waiting.RemoveAll(x => x.Event.Id == id);
+        waiting.RemoveAll(x => x.Id == id);
         if (visible.RemoveAll(x => x.Id == id) > 0) output.Render(visible.ToArray());
     }
 
@@ -60,22 +65,27 @@ public sealed class NotificationDelivery(INotificationOutput output, TimeProvide
         for (var index = waiting.Count - 1; index >= 0; index--)
         {
             var item = waiting[index];
-            if (personalOnly && item.Event.Kind is not (NotificationKind.Personal or NotificationKind.Summary)) continue;
-            var remaining = item.Event.Subjects.Where(x => x.Key != key).ToArray();
-            if (remaining.Length == 0) waiting.RemoveAt(index);
-            else waiting[index] = (item.Event with { Subjects = remaining }, item.Sound);
+            var updated = WithoutSubject(item, key, personalOnly);
+            if (updated is null) waiting.RemoveAt(index);
+            else waiting[index] = updated;
         }
         var changed = false;
         for (var index = visible.Count - 1; index >= 0; index--)
         {
             var item = visible[index];
-            if (personalOnly && item.Kind is not (NotificationKind.Personal or NotificationKind.Summary)) continue;
-            var remaining = item.Subjects.Where(x => x.Key != key).ToArray();
-            if (remaining.Length == item.Subjects.Count) continue;
+            var updated = WithoutSubject(item, key, personalOnly);
+            if (ReferenceEquals(updated, item)) continue;
             changed = true;
-            if (remaining.Length == 0) visible.RemoveAt(index);
-            else visible[index] = item with { Subjects = remaining };
+            if (updated is null) visible.RemoveAt(index);
+            else visible[index] = updated;
         }
         if (changed) output.Render(visible.ToArray());
+    }
+
+    private static NotificationEvent? WithoutSubject(NotificationEvent item, EntityKey key, bool personalOnly)
+    {
+        if (personalOnly && item.Kind is not (NotificationKind.Personal or NotificationKind.Summary)) return item;
+        var remaining = item.Subjects.Where(x => x.Key != key).ToArray();
+        return remaining.Length == 0 ? null : remaining.Length == item.Subjects.Count ? item : item with { Subjects = remaining };
     }
 }

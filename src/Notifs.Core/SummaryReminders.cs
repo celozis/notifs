@@ -49,15 +49,20 @@ public sealed partial class TaskService
     public void SaveSettings(NotificationSettings notifications, SummarySettings summary)
     {
         ValidateNotificationSettings(notifications);
-        if (summary.IntervalMinutes is < 1 or > 525600) throw new ArgumentException("Интервал сводки: от 1 до 525600 минут.");
+        if (summary.IntervalMinutes < 1) throw new ArgumentException("Интервал сводки: положительное целое число минут.");
         if (summary.TaskCount is < 1 or > 10) throw new ArgumentException("Задач в карточке: от 1 до 10.");
         var first = new TaskDeadline(summary.FirstDate, summary.FirstTime).Resolve(time.LocalTimeZone);
         using var connection = Open();
         using var transaction = connection.BeginTransaction();
         var previous = ReadSummary(connection, transaction)!;
         var sameSchedule = previous.Settings.FirstDate == summary.FirstDate && previous.Settings.FirstTime == summary.FirstTime &&
-            previous.Settings.IntervalMinutes == summary.IntervalMinutes && previous.Settings.Enabled == summary.Enabled;
-        var next = sameSchedule ? previous.NextAt : summary.Enabled ? SummaryOccurrence(first, summary.IntervalMinutes, time.GetUtcNow(), inclusive: true) : null;
+            previous.Settings.IntervalMinutes == summary.IntervalMinutes;
+        var next = sameSchedule ? previous.NextAt : SummaryOccurrence(first, summary.IntervalMinutes, time.GetUtcNow(), inclusive: true);
+        if (sameSchedule && summary.Enabled && !previous.Settings.Enabled && next is { } cursor)
+        {
+            var current = SummaryOccurrence(first, summary.IntervalMinutes, time.GetUtcNow(), inclusive: true);
+            next = current is null ? null : cursor > current ? cursor : current;
+        }
         WriteNotificationSettings(connection, transaction, notifications);
         WriteSummary(connection, transaction, new(summary, first, next));
         transaction.Commit();

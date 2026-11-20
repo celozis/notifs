@@ -41,8 +41,8 @@ public sealed class SettingsViewModel : Observable
         HasError = false; Message = "";
         if (!int.TryParse(SnoozeMinutes, out var duration) || duration is <= 0 or > 525600)
         { Invalid("SnoozeInput", "Откладывание: целое число от 1 до 525600 минут."); return; }
-        if (!int.TryParse(SummaryMinutes, out var interval) || interval is < 1 or > 525600)
-        { Invalid("SummaryMinutesInput", "Интервал сводки: целое число от 1 до 525600 минут."); return; }
+        if (!int.TryParse(SummaryMinutes, out var interval) || interval < 1)
+        { Invalid("SummaryMinutesInput", "Интервал сводки: положительное целое число минут."); return; }
         if (!int.TryParse(SummaryTaskCount, out var count) || count is < 1 or > 10)
         { Invalid("SummaryCountInput", "Задач в карточке: целое число от 1 до 10."); return; }
         if (!DateOnly.TryParseExact(SummaryFirstDate.Trim(), "dd.MM.yyyy", CultureInfo.InvariantCulture, DateTimeStyles.None, out var date))

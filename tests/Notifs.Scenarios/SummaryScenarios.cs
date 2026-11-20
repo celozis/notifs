@@ -58,7 +58,7 @@ internal static class SummaryScenarios
         var current = service.PollSummary().Single();
         Check(current.Subjects.Single().Key.Id == later.Id && current.Subjects.Single().Detail == "Создана 7 дн. назад", "fixed anchor resumes after downtime with current task age");
         var saved = service.ReadSummarySettings();
-        foreach (var invalid in new[] { saved with { IntervalMinutes = 0 }, saved with { IntervalMinutes = int.MaxValue }, saved with { TaskCount = 0 }, saved with { TaskCount = 11 } })
+        foreach (var invalid in new[] { saved with { IntervalMinutes = 0 }, saved with { IntervalMinutes = -1 }, saved with { TaskCount = 0 }, saved with { TaskCount = 11 } })
         {
             try { service.SaveSettings(new(true, 99), invalid); throw new Exception("invalid summary accepted"); }
             catch (ArgumentException) { }
@@ -70,27 +70,34 @@ internal static class SummaryScenarios
         service.SaveSettings(new(false, 240), saved);
         Check(service.PollSummary().Single().Subjects.Single().Key.Id == later.Id, "reenabling at an anchored instant delivers the current tick");
         Check(service.PollSummary().Count == 0, "reenabled tick is still delivered once");
+        service.SaveSettings(new(false, 240), saved with { Enabled = false });
+        service.SaveSettings(new(false, 240), saved);
+        Check(service.PollSummary().Count == 0, "off-on toggle at a consumed instant does not duplicate the summary");
     }
 
-    private static void CheckHover(NotificationEvent summary, TimeProvider clock)
+    private static void CheckHover(NotificationEvent summary, Clock clock)
     {
         var output = new Output();
         var delivery = new NotificationDelivery(output, clock);
         var checkin = summary with { Id = Guid.NewGuid(), Kind = NotificationKind.CheckIn };
         delivery.Publish(summary, true);
         delivery.SetHovered(true);
+        clock.Advance(TimeSpan.FromSeconds(2));
         delivery.Publish(checkin, true);
+        Check(output.Sounds == 2, "waiting event sounds on first arrival while hovered");
         Check(output.Stack.Single().Id == summary.Id, "new event waits while pointer is over shared stack");
         delivery.RemoveSubject(summary.Subjects[0].Key, true);
         Check(output.Stack.Single().Subjects.Count == 2, "explicit snooze updates visible summary while hovering");
+        clock.Advance(TimeSpan.FromSeconds(2));
         delivery.SetHovered(false);
+        Check(output.Sounds == 2, "showing a waiting event on pointer departure is silent");
         Check(output.Stack.Count == 2 && output.Stack.Last().Id == checkin.Id && output.Stack.Last().Subjects.Count == 3, "leaving hover publishes waiting independent check-in without suppressing it");
         var next = summary with { Id = Guid.NewGuid() };
         delivery.SetHovered(true); delivery.Publish(next, true);
         foreach (var subject in next.Subjects) delivery.RemoveSubject(subject.Key, false);
         delivery.SetHovered(false);
         Check(output.Stack.Count == 0, "completion removes subjects from visible and waiting summary; empty cards stay hidden");
-        Check(output.Sounds == 1, "row invalidation and hover flush do not replay sound");
+        Check(output.Sounds == 3, "row invalidation and hover flush do not replay sound beyond the third arrival");
     }
 
     private sealed class Output : INotificationOutput
@@ -128,6 +135,8 @@ internal static class SummaryScenarios
         Check(service.RefreshSummary(notification).Subjects.Count == 1, "expired personal snooze does not permanently suppress the task");
         service.Complete(task.Id);
         Check(service.RefreshSummary(notification).Subjects.Count == 0, "polled batch is revalidated after a racing completion");
+        service.SaveSettings(new(false, 40), settings with { IntervalMinutes = int.MaxValue });
+        Check(service.ReadSummarySettings().IntervalMinutes == int.MaxValue, "positive summary intervals are not capped to one year");
     }
 
     private static void Check(bool condition, string message) => DraftScenarios.Check(condition, message);

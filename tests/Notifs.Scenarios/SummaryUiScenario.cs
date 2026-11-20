@@ -104,6 +104,7 @@ internal static partial class UiScenario
         var position = fullListAction.TransformToAncestor((Visual)output.Window.Content).Transform(new Point(0, 0));
         Assert(position.Y + fullListAction.ActualHeight <= ((FrameworkElement)output.Window.Content).ActualHeight + 1, "long summary keeps its full-list action outside the scrolling list");
         SaveImage(output.Window, "issue-7-long-summary.png");
+        main.SettingsCommand.Execute(null); await IdleAsync();
         var root = (FrameworkElement)main.Content;
         foreach (var scale in new[] { 1.5, 2.0 })
         {
