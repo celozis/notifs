@@ -52,7 +52,7 @@ public partial class MainWindow
     private void RequestSignalDeletion(Notifs.Core.SignalReminder item)
     {
         deletingSignal = true;
-        ShowDeletion(item.Id, "Удалить напоминание?", $"«{item.Title}» перестанет напоминать. Последнее удаление можно восстановить; расписание вернётся выключенным.");
+        ShowDeletion(item.Id, "Удалить напоминание?", $"«{item.Title}» перестанет напоминать. Расписание, текущее дело и прошлые выполнения исчезнут из календаря. Последнее удаление можно восстановить; расписание вернётся выключенным.");
     }
     private void ShowDeletion(Guid id, string heading, string message)
     {

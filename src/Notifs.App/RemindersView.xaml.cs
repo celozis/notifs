@@ -7,6 +7,7 @@ namespace Notifs.App;
 
 public partial class RemindersView : UserControl
 {
+    private IInputElement? confirmationInitiator;
     public static readonly DependencyProperty IsNarrowProperty = DependencyProperty.Register(nameof(IsNarrow), typeof(bool), typeof(RemindersView));
     public bool IsNarrow { get => (bool)GetValue(IsNarrowProperty); set => SetValue(IsNarrowProperty, value); }
     public RemindersView(RemindersViewModel model)
@@ -17,13 +18,15 @@ public partial class RemindersView : UserControl
         model.FocusList += FocusList;
         model.ToggleSaved += FocusToggle;
         model.ValidationFailed += FocusInvalid;
-        Unloaded += (_, _) => { model.FocusEditor -= FocusEditor; model.FocusList -= FocusList; model.ToggleSaved -= FocusToggle; model.ValidationFailed -= FocusInvalid; };
+        model.ConfirmModeRequested += FocusConfirmation;
+        model.ConfirmModeClosed += ReturnFromConfirmation;
+        Unloaded += (_, _) => { model.FocusEditor -= FocusEditor; model.FocusList -= FocusList; model.ToggleSaved -= FocusToggle; model.ValidationFailed -= FocusInvalid; model.ConfirmModeRequested -= FocusConfirmation; model.ConfirmModeClosed -= ReturnFromConfirmation; };
         InputBindings.Add(new KeyBinding(model.SaveCommand, Key.S, ModifierKeys.Control));
         SizeChanged += (_, _) =>
         {
             IsNarrow = ActualWidth < 450;
             Form.Width = Math.Min(700, Math.Max(0, ActualWidth - SystemParameters.VerticalScrollBarWidth));
-            foreach (var grid in new[] { ModeFields, StartFields, ListHeading })
+            foreach (var grid in new[] { ModeFields, StartFields, IntervalFields, ListHeading })
             {
                 var columns = ActualWidth < 450 ? 1 : 2;
                 grid.ColumnDefinitions[1].Width = columns == 1 ? new GridLength(0) : new GridLength(1, GridUnitType.Star);
@@ -32,12 +35,22 @@ public partial class RemindersView : UserControl
         };
         model.PropertyChanged += (_, args) =>
         {
+            // IsBusy changes before CanEdit disables the form; remember the actual initiating control.
+            if (args.PropertyName == nameof(model.IsBusy) && model.IsBusy && !model.HasModeConfirmation)
+                confirmationInitiator = Keyboard.FocusedElement;
             if (args.PropertyName == nameof(model.IsEditing) && !model.IsEditing)
                 Dispatcher.InvokeAsync(() => NewReminder.Focus(), DispatcherPriority.ContextIdle);
         };
     }
     private void FocusEditor() => Dispatcher.InvokeAsync(() => { EditorScroll.ScrollToTop(); TitleInput.Focus(); }, DispatcherPriority.Input);
     private void FocusList() => Dispatcher.InvokeAsync(() => NewReminder.Focus(), DispatcherPriority.ContextIdle);
+    private void FocusConfirmation() => Dispatcher.InvokeAsync(() => KeepMode.Focus(), DispatcherPriority.ContextIdle);
+    private void ReturnFromConfirmation() => Dispatcher.InvokeAsync(() =>
+    {
+        if (!((RemindersViewModel)DataContext).IsEditing) NewReminder.Focus();
+        else if (confirmationInitiator is UIElement { IsVisible: true, IsEnabled: true } origin) origin.Focus();
+        else ModeInput.Focus();
+    }, DispatcherPriority.ContextIdle);
     // CommandManager reenables busy commands at Background priority before focus can return.
     private void FocusToggle(Guid id) => Dispatcher.InvokeAsync(() => FindToggle(this, id)?.Focus(), DispatcherPriority.ContextIdle);
     private static Button? FindToggle(DependencyObject parent, Guid id)

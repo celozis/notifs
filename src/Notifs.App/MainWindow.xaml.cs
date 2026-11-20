@@ -61,7 +61,7 @@ public partial class MainWindow : Window
         settingsNavigation = AddNavigation("Настройки", "M1,4 H17 M1,9 H17 M1,14 H17 M5,1 V7 M12,6 V12 M7,11 V17", SettingsCommand, bottom: true);
         InputBindings.Add(new KeyBinding(NewCommand, Key.N, ModifierKeys.Control));
         InputBindings.Add(new KeyBinding(new RelayCommand(() => editor?.SaveCommand.Execute(null), () => CanNavigate() && editor?.SaveCommand.CanExecute(null) == true), Key.S, ModifierKeys.Control));
-        InputBindings.Add(new KeyBinding(new RelayCommand(() => { if (DeleteOverlay.IsVisible) CancelDeleteCommand.Execute(null); else if (RemindersHost.IsVisible && reminders?.CancelCommand.CanExecute(null) == true) reminders.CancelCommand.Execute(null); else if (CancelEditorCommand.CanExecute(null)) CancelEditorCommand.Execute(null); }), Key.Escape, ModifierKeys.None));
+        InputBindings.Add(new KeyBinding(new RelayCommand(() => { if (DeleteOverlay.IsVisible) CancelDeleteCommand.Execute(null); else if (reminders?.HasModeConfirmation == true) reminders.CancelModeCommand.Execute(null); else if (RemindersHost.IsVisible && reminders?.CancelCommand.CanExecute(null) == true) reminders.CancelCommand.Execute(null); else if (CancelEditorCommand.CanExecute(null)) CancelEditorCommand.Execute(null); }), Key.Escape, ModifierKeys.None));
         model.DeletedRestored += async key =>
         {
             if (key.Type == "signal") await OpenRemindersAsync();
@@ -90,7 +90,7 @@ public partial class MainWindow : Window
         AdaptLayout();
     }
 
-    private bool CanNavigate() => !model.IsBusy && editor?.IsBusy != true && reminders?.IsBusy != true && DeleteOverlay?.IsVisible != true && (SettingsHost?.Content as SettingsView)?.DataContext is not SettingsViewModel { IsBusy: true };
+    private bool CanNavigate() => !model.IsBusy && editor?.IsBusy != true && reminders?.IsBusy != true && reminders?.HasModeConfirmation != true && DeleteOverlay?.IsVisible != true && (SettingsHost?.Content as SettingsView)?.DataContext is not SettingsViewModel { IsBusy: true };
     public async Task OpenRemindersAsync()
     {
         if (editor?.PersistDraft() == false) return;
@@ -103,6 +103,10 @@ public partial class MainWindow : Window
         BrowseView.Visibility = Visibility.Collapsed;
         await reminders.LoadAsync();
         AdaptLayout();
+    }
+    public void RefreshReminderRows()
+    {
+        if (RemindersHost.IsVisible) reminders?.RefreshRows();
     }
     public async Task OpenSignalAsync()
     {

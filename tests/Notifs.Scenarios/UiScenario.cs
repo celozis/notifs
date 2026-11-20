@@ -12,13 +12,13 @@ namespace Notifs.Scenarios;
 
 internal static partial class UiScenario
 {
-    public static int Run(Application app, string databasePath, bool fieldsOnly = false, bool draftsOnly = false, bool notificationsOnly = false, bool signalsOnly = false)
+    public static int Run(Application app, string databasePath, bool fieldsOnly = false, bool draftsOnly = false, bool notificationsOnly = false, bool signalsOnly = false, bool recurringOnly = false)
     {
         var result = 1;
         app.ShutdownMode = ShutdownMode.OnExplicitShutdown;
         app.Dispatcher.InvokeAsync(async () =>
         {
-            try { if (signalsOnly) await RunSignalsAsync(databasePath); else if (notificationsOnly) await RunNotificationsAsync(databasePath); else if (draftsOnly) await RunDraftsAsync(databasePath); else if (fieldsOnly) await RunFieldsAsync(databasePath); else { await RunAsync(databasePath); await RunDraftsAsync(databasePath + ".drafts"); await RunNotificationsAsync(databasePath + ".notifications"); await RunSignalsAsync(databasePath + ".signals"); } result = 0; Console.WriteLine("PASS all requested WPF scenarios"); }
+            try { if (recurringOnly) await RunRecurringAsync(databasePath); else if (signalsOnly) await RunSignalsAsync(databasePath); else if (notificationsOnly) await RunNotificationsAsync(databasePath); else if (draftsOnly) await RunDraftsAsync(databasePath); else if (fieldsOnly) await RunFieldsAsync(databasePath); else { await RunAsync(databasePath); await RunDraftsAsync(databasePath + ".drafts"); await RunNotificationsAsync(databasePath + ".notifications"); await RunSignalsAsync(databasePath + ".signals"); await RunRecurringAsync(databasePath + ".recurring"); } result = 0; Console.WriteLine("PASS all requested WPF scenarios"); }
             catch (Exception ex) { Console.Error.WriteLine(ex); }
             finally { app.Shutdown(); }
         });
@@ -259,7 +259,8 @@ internal static partial class UiScenario
         using (var drawing = visual.RenderOpen()) drawing.DrawRectangle(new VisualBrush(root)
         {
             ViewboxUnits = BrushMappingMode.Absolute,
-            Viewbox = new Rect(0, 0, root.ActualWidth, root.ActualHeight),
+            // VisualBrush includes the root's LayoutTransform already; sampling unscaled bounds magnifies it twice.
+            Viewbox = new Rect(0, 0, bitmap.PixelWidth, bitmap.PixelHeight),
             Stretch = Stretch.Fill
         }, null, new Rect(0, 0, bitmap.PixelWidth, bitmap.PixelHeight));
         Trace("render");
