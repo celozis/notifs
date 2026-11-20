@@ -42,13 +42,14 @@ public sealed class NotificationRuntime : IDisposable
             {
                 var id = notification.Subjects[0].Key.Id;
                 // A completion/deletion/snooze may have committed while the worker returned its batch.
-                if (notification.Kind == NotificationKind.Signal)
+                if (notification.Kind is NotificationKind.Signal or NotificationKind.Recurring)
                 {
                     if (!service.IsSignalCurrent(notification)) continue;
                 }
                 else if (!service.List().Any(x => x.Id == id) || service.ReadPersonal(id) is null || service.IsSnoozed(id)) continue;
                 delivery.Publish(notification, result.Settings.Sound);
             }
+            main.RefreshReminderRows();
         }
         catch (Exception ex) when (MainViewModel.IsStorageError(ex)) { model.ReportNotificationError(); }
         finally { polling = false; }
@@ -56,6 +57,15 @@ public sealed class NotificationRuntime : IDisposable
 
     private async Task ActAsync(NotificationEvent notification, NotificationSubject subject, string action)
     {
+        if (subject.Key.Type == "recurring")
+        {
+            if (action == "open") await main.OpenSignalAsync();
+            else if (action == "complete") await Task.Run(() => service.CompleteRecurring(subject.Key.Id));
+            else if (action == "snooze") await Task.Run(() => service.SnoozeRecurring(subject.Key.Id));
+            else throw new ArgumentException("Действие для повторяющегося дела недоступно.");
+            main.RefreshReminderRows();
+            return;
+        }
         if (subject.Key.Type == "signal")
         {
             if (action == "open") await main.OpenSignalAsync();

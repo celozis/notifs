@@ -17,13 +17,15 @@ public partial class RemindersView : UserControl
         model.FocusList += FocusList;
         model.ToggleSaved += FocusToggle;
         model.ValidationFailed += FocusInvalid;
-        Unloaded += (_, _) => { model.FocusEditor -= FocusEditor; model.FocusList -= FocusList; model.ToggleSaved -= FocusToggle; model.ValidationFailed -= FocusInvalid; };
+        model.ConfirmModeRequested += FocusConfirmation;
+        model.ConfirmModeClosed += ReturnFromConfirmation;
+        Unloaded += (_, _) => { model.FocusEditor -= FocusEditor; model.FocusList -= FocusList; model.ToggleSaved -= FocusToggle; model.ValidationFailed -= FocusInvalid; model.ConfirmModeRequested -= FocusConfirmation; model.ConfirmModeClosed -= ReturnFromConfirmation; };
         InputBindings.Add(new KeyBinding(model.SaveCommand, Key.S, ModifierKeys.Control));
         SizeChanged += (_, _) =>
         {
             IsNarrow = ActualWidth < 450;
             Form.Width = Math.Min(700, Math.Max(0, ActualWidth - SystemParameters.VerticalScrollBarWidth));
-            foreach (var grid in new[] { ModeFields, StartFields, ListHeading })
+            foreach (var grid in new[] { ModeFields, StartFields, IntervalFields, ListHeading })
             {
                 var columns = ActualWidth < 450 ? 1 : 2;
                 grid.ColumnDefinitions[1].Width = columns == 1 ? new GridLength(0) : new GridLength(1, GridUnitType.Star);
@@ -38,6 +40,8 @@ public partial class RemindersView : UserControl
     }
     private void FocusEditor() => Dispatcher.InvokeAsync(() => { EditorScroll.ScrollToTop(); TitleInput.Focus(); }, DispatcherPriority.Input);
     private void FocusList() => Dispatcher.InvokeAsync(() => NewReminder.Focus(), DispatcherPriority.ContextIdle);
+    private void FocusConfirmation() => Dispatcher.InvokeAsync(() => KeepMode.Focus(), DispatcherPriority.ContextIdle);
+    private void ReturnFromConfirmation() => Dispatcher.InvokeAsync(() => { if (((RemindersViewModel)DataContext).IsEditing) ModeInput.Focus(); else NewReminder.Focus(); }, DispatcherPriority.ContextIdle);
     // CommandManager reenables busy commands at Background priority before focus can return.
     private void FocusToggle(Guid id) => Dispatcher.InvokeAsync(() => FindToggle(this, id)?.Focus(), DispatcherPriority.ContextIdle);
     private static Button? FindToggle(DependencyObject parent, Guid id)

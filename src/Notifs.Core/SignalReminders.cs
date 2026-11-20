@@ -36,20 +36,29 @@ public sealed partial class TaskService
         command.ExecuteNonQuery();
     }
 
-    public SignalReminder SaveSignal(Guid? id, string title, string description, SignalSchedule schedule, bool enabled)
+    public SignalReminder SaveSignal(Guid? id, string title, string description, SignalSchedule schedule, bool enabled,
+        bool requiresCompletion = false, int repeatMinutes = 60, bool confirmClearDebt = false)
     {
         if (string.IsNullOrWhiteSpace(title)) throw new ArgumentException("Введите название напоминания.");
         schedule.Validate(time.LocalTimeZone);
+        if (!requiresCompletion && schedule.Repeat == SignalRepeat.AfterCompletion) throw new ArgumentException("Простой сигнал не требует выполнения.");
+        if (requiresCompletion && repeatMinutes is < 1 or > 525600) throw new ArgumentException("Повтор до выполнения: от 1 до 525600 минут.");
         using var connection = Open();
         using var transaction = connection.BeginTransaction();
         var previous = id is { } key ? ReadSignal(connection, transaction, key) : null;
-        var unchanged = previous is { Enabled: true } && previous.Schedule.SameRule(schedule);
-        var next = !enabled ? null : unchanged ? previous!.NextAt : schedule.Next(time.GetUtcNow(), time.LocalTimeZone, previous is null);
+        if (!requiresCompletion && previous?.Current is not null && !confirmClearDebt) throw new DebtConfirmationRequiredException();
+        var unchanged = previous is { Enabled: true } && previous.RequiresCompletion == requiresCompletion && previous.Schedule.SameRule(schedule);
+        var sameRecurringRule = requiresCompletion && previous is { RequiresCompletion: true } && previous.Schedule.SameRule(schedule);
+        var next = requiresCompletion ? sameRecurringRule ? previous!.NextAt : schedule.Next(new TaskDeadline(schedule.FirstDate, schedule.FirstTime).Resolve(time.LocalTimeZone), time.LocalTimeZone, true)
+            : !enabled ? null : unchanged ? previous!.NextAt : schedule.Next(time.GetUtcNow(), time.LocalTimeZone, previous is null);
         var item = new SignalReminder(id ?? Guid.NewGuid(), title.Trim(), description, schedule, enabled, next,
-            enabled && unchanged ? previous!.SnoozedUntil : null, Guid.NewGuid());
+            requiresCompletion && previous?.Current is not null ? previous.SnoozedUntil : enabled && unchanged ? previous!.SnoozedUntil : null, Guid.NewGuid(),
+            requiresCompletion, repeatMinutes, requiresCompletion ? previous?.Current : null, previous?.Completions);
+        if (requiresCompletion && enabled) item = MaterializeDebt(item, time.GetUtcNow());
         WriteSignal(connection, transaction, item);
         transaction.Commit();
         TaskNotificationsChanged?.Invoke(new("signal", item.Id), false);
+        if (previous?.Current is { } oldDebt) TaskNotificationsChanged?.Invoke(new("recurring", oldDebt.Id), false);
         return item;
     }
 
@@ -58,11 +67,18 @@ public sealed partial class TaskService
         using var connection = Open();
         using var transaction = connection.BeginTransaction();
         var previous = ReadSignal(connection, transaction, id);
-        var item = previous with { Enabled = enabled, Revision = Guid.NewGuid(), SnoozedUntil = null,
-            NextAt = enabled ? previous.Schedule.Next(time.GetUtcNow(), time.LocalTimeZone) : null };
+        var item = previous with { Enabled = enabled, Revision = Guid.NewGuid(),
+            SnoozedUntil = previous.RequiresCompletion ? previous.SnoozedUntil : null,
+            NextAt = previous.RequiresCompletion ? previous.NextAt : enabled ? previous.Schedule.Next(time.GetUtcNow(), time.LocalTimeZone) : null };
+        if (item.RequiresCompletion && enabled)
+        {
+            item = MaterializeDebt(item, time.GetUtcNow());
+            if (item.Current is { } debt && item.SnoozedUntil is null) item = item with { Current = debt with { NotifyAt = time.GetUtcNow() } };
+        }
         WriteSignal(connection, transaction, item);
         transaction.Commit();
         TaskNotificationsChanged?.Invoke(new("signal", id), false);
+        if (item.Current is { } current) TaskNotificationsChanged?.Invoke(new("recurring", current.Id), false);
         return item;
     }
 
@@ -72,6 +88,7 @@ public sealed partial class TaskService
         using var connection = Open();
         using var transaction = connection.BeginTransaction();
         var item = ReadSignal(connection, transaction, id);
+        if (item.RequiresCompletion) throw new ArgumentException("Откладывайте текущее дело по его идентификатору.");
         if (!item.Enabled) throw new KeyNotFoundException("Напоминание выключено.");
         WriteSignal(connection, transaction, item with { SnoozedUntil = time.GetUtcNow().AddMinutes(minutes) });
         transaction.Commit();
@@ -91,11 +108,21 @@ public sealed partial class TaskService
             while (reader.Read())
             {
                 var item = JsonSerializer.Deserialize<SignalReminder>(reader.GetString(0))!;
-                if (item.Enabled && (item.SnoozedUntil ?? item.NextAt) <= now) due.Add(item);
+                if (item.Enabled && (item.SnoozedUntil ?? item.Current?.NotifyAt ?? item.NextAt) <= now) due.Add(item);
             }
         var events = new List<NotificationEvent>();
         foreach (var item in due)
         {
+            if (item.RequiresCompletion)
+            {
+                var updated = MaterializeDebt(item, now);
+                var debt = updated.Current!;
+                WriteSignal(connection, transaction, updated with { Current = debt with { NotifyAt = now.AddMinutes(item.RepeatMinutes) }, SnoozedUntil = null });
+                events.Add(new(Guid.NewGuid(), NotificationKind.Recurring, item.Revision.ToString(),
+                    [new(new("recurring", debt.Id), item.Title, $"Исходный срок: {TimeZoneInfo.ConvertTime(debt.DueAt, time.LocalTimeZone):dd.MM.yyyy HH:mm} · {item.Description}")],
+                    [new("complete", "Готово"), new("snooze", "Отложить")]));
+                continue;
+            }
             WriteSignal(connection, transaction, item with { NextAt = item.Schedule.Next(now, time.LocalTimeZone), SnoozedUntil = null });
             events.Add(new(Guid.NewGuid(), NotificationKind.Signal, item.Revision.ToString(),
                 [new(new("signal", item.Id), item.Title, item.Description)], [new("snooze", "Отложить")]));
@@ -104,8 +131,13 @@ public sealed partial class TaskService
         return events;
     }
 
-    public bool IsSignalCurrent(NotificationEvent notification) => ListSignals().Any(item => item.Id == notification.Subjects[0].Key.Id &&
+    public bool IsSignalCurrent(NotificationEvent notification) => ListSignals().Any(item =>
+        (notification.Kind == NotificationKind.Recurring ? item.Current?.Id == notification.Subjects[0].Key.Id : item.Id == notification.Subjects[0].Key.Id) &&
         item.Enabled && item.Revision.ToString() == notification.SourceId && item.SnoozedUntil is null);
+
+    private static SignalReminder MaterializeDebt(SignalReminder item, DateTimeOffset now) =>
+        item.Current is null && item.NextAt is { } due && due <= now
+            ? item with { Current = new(Guid.NewGuid(), due, now) } : item;
 
     public void DeleteSignal(Guid id)
     {
@@ -123,6 +155,7 @@ public sealed partial class TaskService
         command.ExecuteNonQuery();
         transaction.Commit();
         TaskNotificationsChanged?.Invoke(new("signal", id), false);
+        if (item.Current is { } current) TaskNotificationsChanged?.Invoke(new("recurring", current.Id), false);
     }
 
     public string? DeletedKind
@@ -146,7 +179,7 @@ public sealed partial class TaskService
         command.CommandText = "SELECT data FROM deleted_item WHERE slot=1 AND kind='signal'";
         if (command.ExecuteScalar() is not string json) throw new KeyNotFoundException("Нет удалённого напоминания.");
         var item = JsonSerializer.Deserialize<SignalReminder>(json)!;
-        WriteSignal(connection, transaction, item with { Enabled = false, NextAt = null, SnoozedUntil = null, Revision = Guid.NewGuid() });
+        WriteSignal(connection, transaction, item with { Enabled = false, NextAt = item.RequiresCompletion ? item.NextAt : null, SnoozedUntil = null, Revision = Guid.NewGuid() });
         command.CommandText = "DELETE FROM deleted_item WHERE slot=1";
         command.ExecuteNonQuery();
         transaction.Commit();
