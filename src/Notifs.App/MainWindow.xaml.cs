@@ -88,7 +88,7 @@ public partial class MainWindow : Window
             if (args.Key is Key.Enter or Key.Space && model.HasSelection && args.OriginalSource is ListBoxItem)
             { showingDetails = true; AdaptLayout(); BackToList.Focus(); args.Handled = true; }
         };
-        Closing += (_, args) => { if (!CanNavigate() || editor?.PersistDraft() == false) args.Cancel = true; };
+        Closing += (_, args) => { if (model.IsBusy || editor?.IsBusy == true || reminders?.IsBusy == true || (SettingsHost?.Content as SettingsView)?.DataContext is SettingsViewModel { IsBusy: true } || editor?.PersistDraft() == false) args.Cancel = true; };
         AdaptLayout();
     }
 

@@ -4,7 +4,7 @@
     <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
       <Grid x:Name="Sections" IsEnabled="{Binding CanEdit}" VerticalAlignment="Top">
         <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition x:Name="SectionGap" Width="18"/><ColumnDefinition x:Name="SecondColumn" Width="*"/></Grid.ColumnDefinitions>
-        <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+        <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
         <Border Background="{DynamicResource Surface}" BorderBrush="{DynamicResource Line}" BorderThickness="1" CornerRadius="12" Padding="22">
           <StackPanel>
             <TextBlock Text="Уведомления" FontSize="16" FontWeight="SemiBold"/>
@@ -12,6 +12,14 @@
             <Label Content="Обычное откладывание, минут" Target="{Binding ElementName=SnoozeInput}"/><TextBox x:Name="SnoozeInput" Text="{Binding SnoozeMinutes, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="Обычное откладывание в минутах"/>
             <CheckBox IsChecked="{Binding Sound}" Margin="0,20,0,12" AutomationProperties.Name="Короткий негромкий звук"><TextBlock Text="Короткий негромкий звук" FontSize="13"/></CheckBox>
             <TextBlock Text="До двух карточек на основном мониторе. Новая появляется снизу." Style="{StaticResource MutedText}"/>
+          </StackPanel>
+        </Border>
+        <Border x:Name="BackgroundSection" Grid.Row="1" Grid.ColumnSpan="3" Margin="0,18,0,0" Background="{DynamicResource Surface}" BorderBrush="{DynamicResource Line}" BorderThickness="1" CornerRadius="12" Padding="22">
+          <StackPanel>
+            <TextBlock Text="Работа в фоне" FontSize="16" FontWeight="SemiBold"/>
+            <TextBlock Text="Крестик сворачивает приложение в трей. Полный выход — через меню значка." Style="{StaticResource MutedText}" Margin="0,10,0,20"/>
+            <CheckBox x:Name="StartWithWindowsInput" IsChecked="{Binding StartWithWindows}" Margin="0,0,0,12" AutomationProperties.Name="Запускать вместе с Windows"><TextBlock Text="Запускать вместе с Windows" FontSize="13" TextWrapping="Wrap"/></CheckBox>
+            <TextBlock Text="Изменение автозапуска применяется кнопкой «Сохранить настройки»." Style="{StaticResource MutedText}"/>
           </StackPanel>
         </Border>
         <Border x:Name="SummarySection" Grid.Column="2" Background="{DynamicResource Surface}" BorderBrush="{DynamicResource Line}" BorderThickness="1" CornerRadius="12" Padding="22">

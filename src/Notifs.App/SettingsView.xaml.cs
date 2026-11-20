@@ -23,5 +23,6 @@ public partial class SettingsView : UserControl
         Grid.SetRow(SummarySection, stacked ? 1 : 0);
         Grid.SetColumn(SummarySection, stacked ? 0 : 2);
         SummarySection.Margin = stacked ? new Thickness(0, 18, 0, 0) : new Thickness(0);
+        Grid.SetRow(BackgroundSection, stacked ? 2 : 1);
     }
 }

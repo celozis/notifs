@@ -2,9 +2,13 @@
   <PropertyGroup>
     <OutputType>WinExe</OutputType><TargetFramework>net10.0-windows</TargetFramework>
     <UseWPF>true</UseWPF><RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ApplicationIcon>Assets/notifs.ico</ApplicationIcon>
     <ApplicationManifest>app.manifest</ApplicationManifest>
   </PropertyGroup>
   <ItemGroup>
+    <Using Remove="System.Drawing" /><Using Remove="System.Windows.Forms" />
+    <Content Include="Assets/notifs.ico" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="Assets/notification.wav" CopyToOutputDirectory="PreserveNewest" />
     <ProjectReference Include="../Notifs.Core/Notifs.Core.csproj" />
     <PackageReference Include="Markdig" Version="1.6.0" />

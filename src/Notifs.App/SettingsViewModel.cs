@@ -6,6 +6,9 @@ namespace Notifs.App;
 public sealed class SettingsViewModel : Observable
 {
     private readonly TaskService service;
+    private readonly WindowsAutoStart autoStart;
+    private bool startWithWindows;
+    public bool StartWithWindows { get => startWithWindows; set { startWithWindows = value; Changed(); } }
     private string minutes = "30", message = "";
     private bool sound = true, busy;
     private bool summaryEnabled = true;
@@ -23,17 +26,19 @@ public sealed class SettingsViewModel : Observable
     public bool IsBusy { get => busy; private set { busy = value; Changed(); Changed(nameof(CanEdit)); System.Windows.Input.CommandManager.InvalidateRequerySuggested(); } }
     public bool CanEdit => !IsBusy;
     public AsyncCommand SaveCommand { get; }
-    public SettingsViewModel(TaskService service)
+    public SettingsViewModel(TaskService service, WindowsAutoStart? autoStart = null)
     {
         this.service = service;
+        this.autoStart = autoStart ?? new WindowsAutoStart();
         try
         {
+            startWithWindows = this.autoStart.IsEnabled;
             var saved = service.ReadNotificationSettings(); sound = saved.Sound; minutes = saved.SnoozeMinutes.ToString();
             var summary = service.ReadSummarySettings();
             summaryEnabled = summary.Enabled; summaryMinutes = summary.IntervalMinutes.ToString(); summaryTaskCount = summary.TaskCount.ToString();
             firstDate = summary.FirstDate.ToString("dd.MM.yyyy", CultureInfo.InvariantCulture); firstTime = summary.FirstTime.ToString("HH:mm", CultureInfo.InvariantCulture);
         }
-        catch (Exception ex) when (MainViewModel.IsStorageError(ex)) { HasError = true; Message = "Не удалось прочитать настройки. Повторите открытие раздела."; }
+        catch (Exception ex) when (IsSettingsError(ex)) { HasError = true; Message = "Не удалось прочитать настройки. Повторите открытие раздела."; }
         SaveCommand = new(SaveAsync, () => !IsBusy);
     }
     private async Task SaveAsync()
@@ -52,10 +57,27 @@ public sealed class SettingsViewModel : Observable
         var settings = new NotificationSettings(Sound, duration);
         var summary = new SummarySettings(SummaryEnabled, interval, count, date, wallTime);
         IsBusy = true;
-        try { await Task.Run(() => service.SaveSettings(settings, summary)); Message = "Настройки сохранены"; }
+        try
+        {
+            await Task.Run(() =>
+            {
+                var previous = autoStart.ReadCommand();
+                var desired = StartWithWindows ? autoStart.LaunchCommand : null;
+                var changed = !string.Equals(previous, desired, StringComparison.Ordinal);
+                if (changed) autoStart.WriteCommand(desired);
+                try { service.SaveSettings(settings, summary); }
+                catch
+                {
+                    if (changed) autoStart.WriteCommand(previous);
+                    throw;
+                }
+            });
+            Message = "Настройки сохранены";
+        }
         catch (ArgumentException ex) { Invalid("SummaryTimeInput", ex.Message); }
-        catch (Exception ex) when (MainViewModel.IsStorageError(ex)) { HasError = true; Message = "Не удалось сохранить настройки. Ввод остаётся в форме; попробуйте ещё раз."; }
+        catch (Exception ex) when (IsSettingsError(ex)) { HasError = true; Message = "Не удалось сохранить настройки или автозапуск Windows. Ввод остаётся в форме; попробуйте ещё раз."; }
         finally { IsBusy = false; }
     }
     private void Invalid(string field, string message) { HasError = true; Message = message; InvalidField?.Invoke(field); }
+    private static bool IsSettingsError(Exception error) => MainViewModel.IsStorageError(error) || error is System.Security.SecurityException;
 }
