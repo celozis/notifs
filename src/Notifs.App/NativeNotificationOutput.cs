@@ -21,6 +21,7 @@ public sealed class NativeNotificationOutput : INotificationOutput, IDisposable
     public Action? HideAllRequested { get; set; }
     public Func<NotificationEvent, NotificationSubject, string, Task>? ActionRequested { get; set; }
     public Func<int> SnoozeMinutes { get; set; } = () => 30;
+    public Action<bool>? HoverChanged { get; set; }
 
     public NativeNotificationOutput()
     {
@@ -43,6 +44,8 @@ public sealed class NativeNotificationOutput : INotificationOutput, IDisposable
             });
         };
         Window.SizeChanged += (_, _) => Position();
+        Window.MouseEnter += (_, _) => HoverChanged?.Invoke(true);
+        Window.MouseLeave += (_, _) => HoverChanged?.Invoke(false);
         SystemParameters.StaticPropertyChanged += ParametersChanged;
     }
 
@@ -103,6 +106,22 @@ public sealed class NativeNotificationOutput : INotificationOutput, IDisposable
         content.Children.Add(header);
         var error = new TextBlock { Foreground = Resource("Danger"), FontSize = 12, Visibility = Visibility.Collapsed };
         AutomationProperties.SetLiveSetting(error, AutomationLiveSetting.Assertive);
+        if (item.Kind == NotificationKind.Summary)
+        {
+            content.Children.Add(new TextBlock { Text = "Вернёмся к делам?", FontSize = 16, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 0, 0, 14) });
+            foreach (var subject in item.Subjects)
+            {
+                var row = new Grid { Margin = new Thickness(0, 0, 0, 12) };
+                row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+                row.ColumnDefinitions.Add(new ColumnDefinition());
+                if (subject.Rank is { } rank) row.Children.Add(new RankBadge { Rank = rank, Style = (Style)Window.FindResource("RankBadge"), VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(0, 2, 10, 0) });
+                var text = new StackPanel(); Grid.SetColumn(text, 1);
+                text.Children.Add(new TextBlock { Text = subject.Title, FontSize = 15, FontWeight = FontWeights.SemiBold });
+                text.Children.Add(new TextBlock { Text = subject.Detail, FontSize = 12, Foreground = Resource("MutedInk") });
+                row.Children.Add(text); content.Children.Add(row);
+            }
+        }
+        else
         foreach (var subject in item.Subjects)
         {
             var open = new Button { Content = new TextBlock { Text = subject.Title, FontSize = 15, FontWeight = FontWeights.SemiBold, TextWrapping = TextWrapping.Wrap },
@@ -125,7 +144,15 @@ public sealed class NativeNotificationOutput : INotificationOutput, IDisposable
         content.Children.Add(error);
         var layout = new Grid();
         if (item.Kind == NotificationKind.Personal) layout.Children.Add(new Border { Width = 3, HorizontalAlignment = HorizontalAlignment.Left, Background = Resource("Primary"), CornerRadius = new CornerRadius(12, 0, 0, 12) });
+        layout.RowDefinitions.Add(new RowDefinition());
+        layout.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         layout.Children.Add(new ScrollViewer { Content = content, Margin = new Thickness(18, 15, 17, 16), VerticalScrollBarVisibility = ScrollBarVisibility.Auto, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled });
+        if (item.Kind == NotificationKind.Summary)
+        {
+            var openTasks = new Button { Content = "Открыть задачи", Style = (Style)Window.FindResource("PrimaryButton"), HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(18, 0, 17, 16) };
+            openTasks.Click += async (_, _) => await InvokeAsync(item, item.Subjects[0], "open-tasks", openTasks, error);
+            Grid.SetRow(openTasks, 1); layout.Children.Add(openTasks);
+        }
         card.Child = layout;
         card.MouseEnter += (_, _) => Hover(background, ((SolidColorBrush)Resource("Hover")).Color);
         card.MouseLeave += (_, _) => Hover(background, normal);
@@ -143,7 +170,7 @@ public sealed class NativeNotificationOutput : INotificationOutput, IDisposable
     }
 
     private static string KindLabel(NotificationKind kind) => kind switch
-    { NotificationKind.Personal => "НАПОМИНАНИЕ", NotificationKind.Signal => "ПРОСТОЙ СИГНАЛ", NotificationKind.Recurring => "ПОВТОРЯЮЩЕЕСЯ ДЕЛО", NotificationKind.CheckIn => "СДЕЛАЛ ЗАДАЧУ?", _ => "СВОДКА" };
+    { NotificationKind.Personal => "НАПОМИНАНИЕ", NotificationKind.Signal => "ПРОСТОЙ СИГНАЛ", NotificationKind.Recurring => "ПОВТОРЯЮЩЕЕСЯ ДЕЛО", NotificationKind.CheckIn => "СДЕЛАЛ ЗАДАЧУ?", _ => "СВОДКА ЗАДАЧ" };
     private Brush Resource(string name) => (Brush)Window.FindResource(name);
     private static void Hover(SolidColorBrush brush, Color color)
     {

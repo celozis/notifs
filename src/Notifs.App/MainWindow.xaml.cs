@@ -124,6 +124,15 @@ public partial class MainWindow : Window
         if (WindowState == WindowState.Minimized) WindowState = WindowState.Normal;
         Show(); Activate(); AdaptLayout();
     }
+    public async Task OpenTasksAsync()
+    {
+        if (!CanNavigate() || editor?.PersistDraft() == false) throw new System.IO.IOException("Завершите текущее действие и повторите открытие.");
+        CloseEditor();
+        await model.OpenTaskListAsync();
+        showingDetails = false;
+        if (WindowState == WindowState.Minimized) WindowState = WindowState.Normal;
+        Show(); Activate(); AdaptLayout(); FocusSelected();
+    }
     private async Task NavigateAsync(bool history)
     {
         if (editor?.PersistDraft() == false) return;

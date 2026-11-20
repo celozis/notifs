@@ -75,9 +75,22 @@ public sealed partial class TaskService
 
     public void SaveNotificationSettings(NotificationSettings settings)
     {
-        if (settings.SnoozeMinutes is <= 0 or > 525600) throw new ArgumentException("Отсрочка: целое число от 1 до 525600 минут.");
+        ValidateNotificationSettings(settings);
         using var connection = Open();
+        using var transaction = connection.BeginTransaction();
+        WriteNotificationSettings(connection, transaction, settings);
+        transaction.Commit();
+    }
+
+    private static void ValidateNotificationSettings(NotificationSettings settings)
+    {
+        if (settings.SnoozeMinutes is <= 0 or > 525600) throw new ArgumentException("Отсрочка: целое число от 1 до 525600 минут.");
+    }
+
+    private static void WriteNotificationSettings(SqliteConnection connection, SqliteTransaction transaction, NotificationSettings settings)
+    {
         using var command = connection.CreateCommand();
+        command.Transaction = transaction;
         command.CommandText = "INSERT INTO notification_settings(slot,sound,snooze_minutes) VALUES(1,$sound,$minutes) ON CONFLICT(slot) DO UPDATE SET sound=excluded.sound,snooze_minutes=excluded.snooze_minutes";
         command.Parameters.AddWithValue("$sound", settings.Sound);
         command.Parameters.AddWithValue("$minutes", settings.SnoozeMinutes);
