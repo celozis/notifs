@@ -24,6 +24,8 @@ internal static class Program
         var directory = Path.Combine(Path.GetTempPath(), "Notifs.Scenarios", Guid.NewGuid().ToString("N"));
         try
         {
+            SummaryScenarios.Run(directory);
+            if (args.Contains("--summary")) return 0;
             if (args.Contains("--recurring")) { RecurringScenarios.Run(directory); return 0; }
             DraftScenarios.Run(directory);
             if (args.Contains("--drafts")) return 0;
@@ -96,7 +98,7 @@ internal static class Program
             editor.SaveCommand.Execute(null); // Invalid title is synchronous, no dispatcher pump needed.
             Check(editor.HasError && editor.Description == markdown && reopened.ListAll().Count == 2, "invalid UI submission retains Markdown and creates nothing");
             Console.WriteLine("All application and rendering checks passed.");
-            return UiScenario.Run(app, Path.Combine(directory, "ui.db"), args.Contains("--fields-ui"), args.Contains("--drafts-ui"), args.Contains("--notifications-ui"), args.Contains("--signals-ui"), args.Contains("--recurring-ui"));
+            return UiScenario.Run(app, Path.Combine(directory, "ui.db"), args.Contains("--fields-ui"), args.Contains("--drafts-ui"), args.Contains("--notifications-ui"), args.Contains("--signals-ui"), args.Contains("--recurring-ui"), args.Contains("--summary-ui"));
         }
         catch (Exception ex) { Console.Error.WriteLine(ex); return 1; }
         finally

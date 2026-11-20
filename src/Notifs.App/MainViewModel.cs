@@ -219,6 +219,12 @@ public sealed class MainViewModel : Observable
         history = false; filter = TaskFilter.All;
         await LoadAsync(id, true);
     }
+
+    public async Task OpenTaskListAsync()
+    {
+        history = false;
+        await LoadAsync(reapplyFilter: true);
+    }
     private const string NotificationError = "Не удалось обработать напоминания. Проверьте доступ к папке данных; повторим автоматически.";
     internal void ReportNotificationError() { if (!HasError || Error == NotificationError) Error = NotificationError; }
     internal void ClearNotificationError() { if (Error == NotificationError) Error = ""; }

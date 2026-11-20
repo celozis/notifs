@@ -19,6 +19,7 @@ public sealed class NotificationRuntime : IDisposable
         this.service = service; this.model = model; this.main = main;
         this.output = output ?? new NativeNotificationOutput();
         delivery = new(this.output);
+        this.output.HoverChanged = delivery.SetHovered;
         this.output.HideRequested = delivery.Hide;
         this.output.HideAllRequested = delivery.HideAll;
         this.output.ActionRequested = ActAsync;
@@ -35,11 +36,16 @@ public sealed class NotificationRuntime : IDisposable
         polling = true;
         try
         {
-            var result = await Task.Run(() => (Events: service.PollPersonal().Concat(service.PollSignals()).ToArray(), Settings: service.ReadNotificationSettings()));
+            var result = await Task.Run(() => (Events: service.PollPersonal().Concat(service.PollSignals()).Concat(service.PollSummary()).ToArray(), Settings: service.ReadNotificationSettings()));
             if (disposed) return;
             model.ClearNotificationError();
             foreach (var notification in result.Events)
             {
+                if (notification.Kind == NotificationKind.Summary)
+                {
+                    delivery.Publish(service.RefreshSummary(notification), result.Settings.Sound);
+                    continue;
+                }
                 var id = notification.Subjects[0].Key.Id;
                 // A completion/deletion/snooze may have committed while the worker returned its batch.
                 if (notification.Kind is NotificationKind.Signal or NotificationKind.Recurring)
@@ -57,6 +63,8 @@ public sealed class NotificationRuntime : IDisposable
 
     private async Task ActAsync(NotificationEvent notification, NotificationSubject subject, string action)
     {
+        if (notification.Kind == NotificationKind.Summary && action == "open-tasks")
+        { await main.OpenTasksAsync(); delivery.Hide(notification.Id); return; }
         if (subject.Key.Type == "recurring")
         {
             if (action == "open") await main.OpenSignalAsync();

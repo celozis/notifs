@@ -1,12 +1,33 @@
 <UserControl x:Class="Notifs.App.SettingsView" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
   <Grid><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
     <StackPanel Margin="0,0,0,26"><TextBlock Text="Настройки" FontSize="29" FontWeight="SemiBold"/><TextBlock Text="Спокойная работа — по твоим правилам." Style="{StaticResource MutedText}" Margin="0,8,0,0"/></StackPanel>
-    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"><Border Background="{DynamicResource Surface}" BorderBrush="{DynamicResource Line}" BorderThickness="1" CornerRadius="12" Padding="22" VerticalAlignment="Top" MaxWidth="700" HorizontalAlignment="Stretch"><StackPanel IsEnabled="{Binding CanEdit}">
-      <TextBlock Text="Уведомления" FontSize="16" FontWeight="SemiBold"/><TextBlock Text="Карточки не забирают фокус и остаются до закрытия." Style="{StaticResource MutedText}" Margin="0,10,0,20"/>
-      <Label Content="Обычное откладывание, минут" Target="{Binding ElementName=SnoozeInput}"/><TextBox x:Name="SnoozeInput" Text="{Binding SnoozeMinutes, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="Обычное откладывание в минутах"/>
-      <CheckBox Content="Короткий негромкий звук" IsChecked="{Binding Sound}" Foreground="{DynamicResource Ink}" MinHeight="44" Margin="0,20,0,12"/>
-      <TextBlock Text="До двух карточек на основном мониторе. Новая появляется снизу." Style="{StaticResource MutedText}"/>
-    </StackPanel></Border></ScrollViewer>
-    <StackPanel Grid.Row="2" Margin="0,20,0,0"><TextBlock Text="{Binding Message}" AutomationProperties.LiveSetting="Polite" Margin="0,0,0,10"/><Button Content="Сохранить настройки" Command="{Binding SaveCommand}" Style="{StaticResource PrimaryButton}" HorizontalAlignment="Left"/></StackPanel>
+    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+      <Grid x:Name="Sections" IsEnabled="{Binding CanEdit}" VerticalAlignment="Top">
+        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition x:Name="SectionGap" Width="18"/><ColumnDefinition x:Name="SecondColumn" Width="*"/></Grid.ColumnDefinitions>
+        <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+        <Border Background="{DynamicResource Surface}" BorderBrush="{DynamicResource Line}" BorderThickness="1" CornerRadius="12" Padding="22">
+          <StackPanel>
+            <TextBlock Text="Уведомления" FontSize="16" FontWeight="SemiBold"/>
+            <TextBlock Text="Карточки не забирают фокус и остаются до закрытия." Style="{StaticResource MutedText}" Margin="0,10,0,20"/>
+            <Label Content="Обычное откладывание, минут" Target="{Binding ElementName=SnoozeInput}"/><TextBox x:Name="SnoozeInput" Text="{Binding SnoozeMinutes, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="Обычное откладывание в минутах"/>
+            <CheckBox IsChecked="{Binding Sound}" Margin="0,20,0,12" AutomationProperties.Name="Короткий негромкий звук"><TextBlock Text="Короткий негромкий звук" FontSize="13"/></CheckBox>
+            <TextBlock Text="До двух карточек на основном мониторе. Новая появляется снизу." Style="{StaticResource MutedText}"/>
+          </StackPanel>
+        </Border>
+        <Border x:Name="SummarySection" Grid.Column="2" Background="{DynamicResource Surface}" BorderBrush="{DynamicResource Line}" BorderThickness="1" CornerRadius="12" Padding="22">
+          <StackPanel>
+            <TextBlock Text="Периодическая сводка" FontSize="16" FontWeight="SemiBold"/>
+            <TextBlock Text="Напоминает о незавершённых задачах, даже во время занятия." Style="{StaticResource MutedText}" Margin="0,10,0,20"/>
+            <CheckBox IsChecked="{Binding SummaryEnabled}" Margin="0,0,0,8" AutomationProperties.Name="Показывать сводку"><TextBlock Text="Показывать сводку" FontSize="13"/></CheckBox>
+            <Label Content="Интервал сводки, минут" Target="{Binding ElementName=SummaryMinutesInput}"/><TextBox x:Name="SummaryMinutesInput" Text="{Binding SummaryMinutes, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="Интервал сводки в минутах"/>
+            <Label Content="Задач в карточке" Target="{Binding ElementName=SummaryCountInput}" Margin="0,14,0,0"/><TextBox x:Name="SummaryCountInput" Text="{Binding SummaryTaskCount, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="Задач в карточке от 1 до 10"/>
+            <Label Content="Первая сводка — дата" Target="{Binding ElementName=SummaryDateInput}" Margin="0,14,0,0"/><TextBox x:Name="SummaryDateInput" Text="{Binding SummaryFirstDate, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="Дата первой сводки ДД.ММ.ГГГГ"/>
+            <Label Content="Время, ЧЧ:ММ" Target="{Binding ElementName=SummaryTimeInput}" Margin="0,14,0,0"/><TextBox x:Name="SummaryTimeInput" Text="{Binding SummaryFirstTime, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="Время первой сводки ЧЧ:ММ"/>
+            <TextBlock Text="Порядок — по срочности. Отложенная задача временно не включается." Style="{StaticResource MutedText}" Margin="0,18,0,0"/>
+          </StackPanel>
+        </Border>
+      </Grid>
+    </ScrollViewer>
+    <StackPanel Grid.Row="2" Margin="0,20,0,0"><TextBlock Text="{Binding Message}" AutomationProperties.LiveSetting="Polite" Margin="0,0,0,10"/><Button Command="{Binding SaveCommand}" Style="{StaticResource PrimaryButton}" HorizontalAlignment="Left"><TextBlock Text="Сохранить настройки" FontSize="13"/></Button></StackPanel>
   </Grid>
 </UserControl>
