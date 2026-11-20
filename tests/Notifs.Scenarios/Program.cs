@@ -24,7 +24,15 @@ internal static class Program
         var directory = Path.Combine(Path.GetTempPath(), "Notifs.Scenarios", Guid.NewGuid().ToString("N"));
         try
         {
+            if (args.Contains("--background")) { BackgroundProcessScenarios.Run(directory); return 0; }
+            if (args.Contains("--autostart")) { AutoStartScenarios.Run(); return 0; }
+            if (args.Contains("--background-ui"))
+            {
+                var backgroundApp = new Application(); backgroundApp.Resources.MergedDictionaries.Add(new ResourceDictionary { Source = new Uri("/Notifs.App;component/Theme.xaml", UriKind.Relative) });
+                return BackgroundUiScenario.Run(backgroundApp, directory);
+            }
             CalendarScenarios.Run(directory);
+            if (args.Length == 0) { BackgroundProcessScenarios.Run(Path.Combine(directory, "process")); AutoStartScenarios.Run(); }
             if (args.Contains("--calendar")) return 0;
             TaskListScenarios.Run(directory);
             if (args.Contains("--lists")) return 0;

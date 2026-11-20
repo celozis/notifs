@@ -4,7 +4,7 @@
     <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
       <Grid x:Name="Sections" IsEnabled="{Binding CanEdit}" VerticalAlignment="Top">
         <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition x:Name="SectionGap" Width="18"/><ColumnDefinition x:Name="SecondColumn" Width="*"/></Grid.ColumnDefinitions>
-        <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+        <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
         <Border Background="{DynamicResource Surface}" BorderBrush="{DynamicResource Line}" BorderThickness="1" CornerRadius="12" Padding="22">
           <StackPanel>
             <TextBlock Text="Уведомления" FontSize="16" FontWeight="SemiBold"/>
@@ -24,6 +24,14 @@
             <Label Content="Первая сводка — дата" Target="{Binding ElementName=SummaryDateInput}" Margin="0,14,0,0"/><TextBox x:Name="SummaryDateInput" Text="{Binding SummaryFirstDate, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="Дата первой сводки ДД.ММ.ГГГГ"/>
             <Label Content="Время, ЧЧ:ММ" Target="{Binding ElementName=SummaryTimeInput}" Margin="0,14,0,0"/><TextBox x:Name="SummaryTimeInput" Text="{Binding SummaryFirstTime, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="Время первой сводки ЧЧ:ММ"/>
             <TextBlock Text="Порядок — по срочности. Отложенная задача временно не включается." Style="{StaticResource MutedText}" Margin="0,18,0,0"/>
+          </StackPanel>
+        </Border>
+        <Border x:Name="BackgroundSection" Grid.Row="1" Grid.ColumnSpan="3" Margin="0,18,0,0" Background="{DynamicResource Surface}" BorderBrush="{DynamicResource Line}" BorderThickness="1" CornerRadius="12" Padding="22">
+          <StackPanel>
+            <TextBlock Text="Работа в фоне" FontSize="16" FontWeight="SemiBold"/>
+            <TextBlock Text="Крестик сворачивает приложение в трей. Полный выход — через меню значка." Style="{StaticResource MutedText}" Margin="0,10,0,20"/>
+            <CheckBox x:Name="StartWithWindowsInput" IsChecked="{Binding StartWithWindows}" Margin="0,0,0,12" AutomationProperties.Name="Запускать вместе с Windows"><TextBlock Text="Запускать вместе с Windows" FontSize="13" TextWrapping="Wrap"/></CheckBox>
+            <TextBlock Text="Изменение автозапуска применяется кнопкой «Сохранить настройки»." Style="{StaticResource MutedText}"/>
           </StackPanel>
         </Border>
       </Grid>
