@@ -16,7 +16,13 @@
 .\build.ps1 -Bootstrap -Run
 ```
 
-Если PowerShell сообщает, что выполнение сценариев отключено, запустите SDK напрямую из папки проекта:
+Если PowerShell сообщает, что выполнение сценариев отключено, разрешите выполнение только для запуска этой команды:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\build.ps1 -Run
+```
+
+`build.ps1` сохранён как UTF-8 с BOM для Windows PowerShell 5.1 и PowerShell 7. Постоянная политика выполнения не меняется. Также можно запустить SDK напрямую из папки проекта:
 
 ```powershell
 & .\.scratch\dotnet\dotnet.exe run --project .\src\Notifs.App --configuration Release
