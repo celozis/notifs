@@ -14,13 +14,13 @@ public abstract class Observable : INotifyPropertyChanged
     protected void Changed([CallerMemberName] string? name = null) => PropertyChanged?.Invoke(this, new(name));
 }
 
-public sealed class TaskRow(TaskItem item, TaskService service) : Observable
+public sealed class TaskRow(TaskItem item, TaskService service, string calendarReasons = "") : Observable
 {
     public TaskItem Item { get; private set; } = item;
     private TaskTiming timing = service.Timing(item);
     public ImportanceRank Rank => Item.Rank;
     public string Title => Item.Title;
-    public string CalendarReasons { get; init; } = "";
+    public string CalendarReasons { get; private set; } = calendarReasons;
     public string Description => Item.Description;
     public bool IsCompleted => Item.CompletedAt is not null;
     public bool IsIncomplete => !IsCompleted;
@@ -43,8 +43,9 @@ public sealed class TaskRow(TaskItem item, TaskService service) : Observable
             return days switch { 0 => "Создана сегодня", 1 => "Создана вчера", _ => $"Создана {days} дн. назад" };
         }
     }
-    public void Update(TaskItem value)
+    public void Update(TaskItem value, string? reasons = null)
     {
+        if (reasons != null) { CalendarReasons = reasons; Changed(nameof(CalendarReasons)); }
         Item = value;
         timing = service.Timing(value);
         foreach (var name in new[] { nameof(Item), nameof(Title), nameof(Description), nameof(Rank), nameof(IsCompleted), nameof(IsIncomplete), nameof(StateLabel), nameof(ToggleLabel), nameof(CheckLabel), nameof(CreatedLabel), nameof(AgeLabel), nameof(DeadlineLabel), nameof(EstimateLabel), nameof(SlackLabel), nameof(IsOverdue), nameof(HasNegativeSlack), nameof(UrgencyLabel), nameof(MetadataLabel) }) Changed(name);
@@ -157,14 +158,14 @@ public sealed partial class MainViewModel : Observable
             {
                 heldPositions.Clear();
                 Tasks.Clear();
-                foreach (var item in all.Where(MatchesFilter)) Tasks.Add(new(item, service) { CalendarReasons = calendar ? MainWindow.ReasonLabel(service.ReasonsFor(item, Calendar.Period)) : "" });
+                foreach (var item in all.Where(MatchesFilter)) Tasks.Add(new(item, service, calendar ? MainWindow.ReasonLabel(service.ReasonsFor(item, Calendar.Period)) : ""));
             }
             else
             {
                 foreach (var row in Tasks.ToArray())
                 {
                     var updated = all.FirstOrDefault(x => x.Id == row.Item.Id);
-                    if (updated is null) Tasks.Remove(row); else row.Update(updated);
+                    if (updated is null) Tasks.Remove(row); else row.Update(updated, calendar ? MainWindow.ReasonLabel(service.ReasonsFor(updated, Calendar.Period)) : "");
                 }
                 // Newly saved tasks are visible immediately, without moving existing cards.
                 foreach (var item in all.Where(x => x.Id == selectId && Tasks.All(row => row.Item.Id != x.Id))) Tasks.Add(new(item, service));
@@ -224,6 +225,12 @@ public sealed partial class MainViewModel : Observable
     {
         history = false; calendar = false;
         await LoadAsync(id, true);
+        // Opening a concrete notification must remain possible even when the saved list excludes it.
+        if (!HasError && Tasks.All(row => row.Item.Id != id))
+        {
+            var task = service.ListAll().SingleOrDefault(item => item.Id == id);
+            if (task != null) { var row = new TaskRow(task, service); Tasks.Add(row); Selected = row; RefreshLabels(); }
+        }
     }
 
     public async Task OpenTaskListAsync()
@@ -248,7 +255,7 @@ public sealed partial class MainViewModel : Observable
     public async Task EditorSavedAsync(Guid id, bool created)
     {
         if (created && !calendar) { history = false; }
-        await LoadAsync(id, true);
+        await LoadAsync(id, created);
     }
     public void RefreshTime()
     {

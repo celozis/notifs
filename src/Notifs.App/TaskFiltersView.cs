@@ -60,11 +60,12 @@ public sealed class TaskFiltersView : UserControl
             finally { IsBusy = false; IsEnabled = true; }
         };
         actions.Children.Add(reset); actions.Children.Add(save); footer.Children.Add(actions); Grid.SetRow(footer, 2); root.Children.Add(footer); Content = root;
-        sort.SelectionChanged += (_, _) => direction.IsEnabled = sort.SelectedIndex != 0;
+        sort.SelectionChanged += (_, _) => UpdateDirection();
         estimateMode.SelectionChanged += (_, _) => estimateFrom.IsEnabled = estimateTo.IsEnabled = unit.IsEnabled = estimateMode.SelectedIndex == 0;
         deadlineMode.SelectionChanged += (_, _) => deadlineFrom.IsEnabled = deadlineTo.IsEnabled = deadlineMode.SelectedIndex == 0;
         foreach (var box in new[] { sort, direction, status, estimateMode, deadlineMode, unit }) box.Style = (Style)FindResource("FilterChoice");
         Populate(initial);
+        UpdateDirection();
         SizeChanged += (_, _) => { foreach (var pair in pairs) pair.Stacked = ActualWidth < 430; };
         Loaded += (_, _) => sort.Focus();
     }
@@ -76,6 +77,12 @@ public sealed class TaskFiltersView : UserControl
         estimateMode.SelectedIndex = (int)value.EstimateMode; deadlineMode.SelectedIndex = (int)value.DeadlineMode; unit.SelectedIndex = 0;
         estimateFrom.Text = value.EstimateFrom?.ToString() ?? ""; estimateTo.Text = value.EstimateTo?.ToString() ?? "";
         deadlineFrom.Text = Date(value.DeadlineFrom); deadlineTo.Text = Date(value.DeadlineTo); createdFrom.Text = Date(value.CreatedFrom); createdTo.Text = Date(value.CreatedTo); error.Text = "";
+    }
+    private void UpdateDirection()
+    {
+        var descending = direction.SelectedIndex == 1;
+        direction.ItemsSource = sort.SelectedIndex == 0 ? new[] { "Автоматически", "Автоматически" } : new[] { "По возрастанию", "По убыванию" };
+        direction.SelectedIndex = descending ? 1 : 0; direction.IsEnabled = sort.SelectedIndex != 0;
     }
     private static string Date(DateOnly? date) => date?.ToString("dd.MM.yyyy", CultureInfo.InvariantCulture) ?? "";
     private TaskListSettings Read() => new((TaskStatusFilter)status.SelectedIndex, (TaskSort)sort.SelectedIndex, direction.SelectedIndex == 1,

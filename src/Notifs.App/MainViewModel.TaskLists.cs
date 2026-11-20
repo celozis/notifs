@@ -9,7 +9,8 @@ public sealed partial class MainViewModel
     public TaskListSettings Settings { get; private set; } = new();
     public bool IsCalendar => calendar;
     public string SortLabel => new[] { "По срочности", "По рангу", "По полной оценке", "По дедлайну", "По созданию" }[(int)Settings.Sort] +
-        (Settings.Sort == TaskSort.Urgency ? "" : Settings.Descending ? " ↓" : " ↑") + (Settings.HasFieldFilters ? " · Есть отбор" : "");
+        (Settings.Sort == TaskSort.Urgency ? "" : Settings.Descending ? " ↓" : " ↑") + (Settings.HasFieldFilters ? " · Есть отбор" : "") +
+        (Settings.Status == TaskStatusFilter.All ? "" : Settings.Status == TaskStatusFilter.Incomplete ? " · Не сделаны" : " · Сделаны");
     public async Task<bool> ApplySettingsAsync(TaskListSettings value)
     {
         IsBusy = true;

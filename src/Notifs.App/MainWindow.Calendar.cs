@@ -23,10 +23,10 @@ public partial class MainWindow
         CalendarCommand = new(async () => { if (editor?.PersistDraft() == false) return; CloseEditor(); showingDetails = false; await model.OpenCalendarAsync(); AdaptLayout(); }, CanNavigate);
         model.CalendarChanged += RenderCalendar;
     }
-    private Button ActionButton(string text, Action action, string? name = null)
+    private Button ActionButton(string text, Func<Task> action, string? name = null)
     {
-        var button = new Button { Content = text, FontSize = 12, Margin = new(0, 0, 6, 8) };
-        AutomationProperties.SetName(button, name ?? text); button.Click += (_, _) => action(); return button;
+        var button = new Button { Content = text, FontSize = 12, Margin = new(0, 0, 6, 8), Command = new AsyncCommand(action, () => !model.IsBusy) };
+        AutomationProperties.SetName(button, name ?? text); return button;
     }
     private async Task MoveCalendarAsync(CalendarState next, DateOnly? focus = null)
     {
@@ -40,6 +40,7 @@ public partial class MainWindow
     private void RenderCalendar()
     {
         CalendarHeader.Visibility = model.IsCalendar ? Visibility.Visible : Visibility.Collapsed;
+        MonthWeekdays.Visibility = model.IsCalendar && model.Calendar.IsMonth ? Visibility.Visible : Visibility.Collapsed;
         MonthHost.Visibility = model.IsCalendar && model.Calendar.IsMonth ? Visibility.Visible : Visibility.Collapsed;
         ContentGrid.Visibility = model.IsCalendar && model.Calendar.IsMonth ? Visibility.Collapsed : Visibility.Visible;
         if (calendarNavigation != null) calendarNavigation.Background = (Brush)FindResource(model.IsCalendar ? "Selected" : "Navigation");
@@ -81,9 +82,7 @@ public partial class MainWindow
         }
         CalendarHeader.Content = header;
         if (!state.IsMonth) return;
-        var month = new StackPanel(); var weekdays = new UniformGrid { Columns = 7, Margin = new(0, 0, 0, 6) };
-        foreach (var day in new[] { "ПН", "ВТ", "СР", "ЧТ", "ПТ", "СБ", "ВС" }) weekdays.Children.Add(new TextBlock { Text = day, FontSize = 11, HorizontalAlignment = HorizontalAlignment.Center });
-        month.Children.Add(weekdays);
+        var month = new StackPanel();
         var grid = new UniformGrid { Columns = 7 };
         var start = CalendarState.Monday(state.Month);
         var last = state.Month.AddMonths(1).AddDays(-1); var cells = ((last.DayNumber - start.DayNumber) / 7 + 1) * 7;
@@ -107,7 +106,8 @@ public partial class MainWindow
         content.Children.Add(numberSurface);
         button.SizeChanged += (_, _) =>
         {
-            var compact = button.ActualWidth < 55;
+            // Use the allocated calendar width; measuring the button itself would feed its margin back into this breakpoint.
+            var compact = CalendarHeader.ActualWidth < 420;
             button.Padding = new(compact ? 1 : month ? 5 : 2);
             button.Margin = new(0, 0, compact ? 2 : 6, 6);
             if (month) numberSurface.Width = compact ? 16 : 24;
@@ -123,7 +123,7 @@ public partial class MainWindow
             }
             if (entries.Count > 3) content.Children.Add(new TextBlock { Text = $"Ещё {entries.Count - 3}", FontSize = 10, LineHeight = 14, Foreground = (Brush)FindResource("MutedInk") });
         }
-        button.Content = content; button.Click += async (_, _) => { if (month) await ShowCalendarDayAsync(date); else await MoveCalendarAsync(state with { SelectedDay = date, WholeWeek = false }, date); };
+        button.Content = content; button.Command = new AsyncCommand(async () => { if (month) await ShowCalendarDayAsync(date); else await MoveCalendarAsync(state with { SelectedDay = date, WholeWeek = false }, date); }, CanNavigate);
         button.PreviewKeyDown += async (_, args) =>
         {
             var offset = args.Key switch { Key.Left => -1, Key.Right => 1, Key.Up => -7, Key.Down => 7, _ => 0 };
@@ -141,7 +141,7 @@ public partial class MainWindow
         FocusDay(day);
         var panel = new Grid(); panel.RowDefinitions.Add(new() { Height = GridLength.Auto }); panel.RowDefinitions.Add(new()); panel.RowDefinitions.Add(new() { Height = GridLength.Auto });
         var title = new DockPanel { Margin = new(0, 0, 0, 18) };
-        var close = ActionButton("×", CloseTaskPanel, "Закрыть день"); DockPanel.SetDock(close, Dock.Right); title.Children.Add(close);
+        var close = ActionButton("×", () => { CloseTaskPanel(); return Task.CompletedTask; }, "Закрыть день"); DockPanel.SetDock(close, Dock.Right); title.Children.Add(close);
         title.Children.Add(new TextBlock { Text = FullDate(day), FontSize = 22, FontWeight = FontWeights.SemiBold, VerticalAlignment = VerticalAlignment.Center }); panel.Children.Add(title);
         var rows = new StackPanel(); var entries = model.CalendarDay(day);
         if (entries.Count == 0) rows.Children.Add(new TextBlock { Text = "В этот день нет задач с текущими фильтрами.", FontSize = 14, Margin = new(0, 16, 0, 16) });
@@ -152,7 +152,7 @@ public partial class MainWindow
             row.Children.Add(new TextBlock { Text = ReasonLabel(entry.Reasons), FontSize = 11, Foreground = (Brush)FindResource("MutedInk") });
             var task = new Button { Content = row, Padding = new(16), HorizontalContentAlignment = HorizontalAlignment.Stretch, Margin = new(0, 0, 0, 10) };
             AutomationProperties.SetName(task, entry.Task.Title + ", " + ReasonLabel(entry.Reasons));
-            task.Click += async (_, _) => await GoToCalendarDayAsync(day, entry.Task.Id); rows.Children.Add(task);
+            task.Command = new AsyncCommand(() => GoToCalendarDayAsync(day, entry.Task.Id), () => !model.IsBusy); rows.Children.Add(task);
         }
         var scroll = new ScrollViewer { Content = rows, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled }; Grid.SetRow(scroll, 1); panel.Children.Add(scroll);
         var go = ActionButton("Перейти к этому дню", async () => await GoToCalendarDayAsync(day)); go.Style = (Style)FindResource("PrimaryButton"); go.HorizontalAlignment = HorizontalAlignment.Right; go.Margin = new(0, 16, 0, 0); Grid.SetRow(go, 2); panel.Children.Add(go);
@@ -160,6 +160,7 @@ public partial class MainWindow
     }
     private async Task GoToCalendarDayAsync(DateOnly day, Guid? task = null)
     {
+        if (model.IsBusy) return;
         CloseTaskPanel();
         if (!await model.ChangeCalendarAsync(new(new(day.Year, day.Month, 1), day))) return;
         if (task != null) { model.Selected = model.Tasks.FirstOrDefault(x => x.Item.Id == task); showingDetails = true; }

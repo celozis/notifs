@@ -235,6 +235,11 @@ public partial class MainWindow : Window
     private void AdaptLayout()
     {
         var width = Shell.ActualWidth > 0 ? Shell.ActualWidth : Width;
+        var minimumHeight = width < 550 ? 750 : width < 850 ? 650 : 500;
+        var availableHeight = (ActualHeight - 40) / Math.Max(0.1, Shell.LayoutTransform.Value.M22);
+        var scrollWorkspace = availableHeight < minimumHeight + 80;
+        BrowseView.Height = scrollWorkspace ? minimumHeight : double.NaN;
+        BrowseScroll.VerticalScrollBarVisibility = scrollWorkspace ? ScrollBarVisibility.Auto : ScrollBarVisibility.Disabled;
         var iconsOnly = width < 550;
         NavColumn.Width = new GridLength(iconsOnly ? 58 : 178);
         Navigation.Padding = iconsOnly ? new Thickness(7, 30, 6, 16) : new Thickness(12, 30, 12, 16);

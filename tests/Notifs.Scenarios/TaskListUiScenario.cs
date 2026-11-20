@@ -20,6 +20,7 @@ internal static partial class UiScenario
         var view = (TaskFiltersView)((ContentControl)main.FindName("TaskPanelHost")).Content;
         Assert(Keyboard.FocusedElement is ComboBox && !((FrameworkElement)main.FindName("Workspace")).IsEnabled, "filters receive focus and disable background navigation");
         ComboBox Choice(string name) => Descendants<ComboBox>(view).Single(x => AutomationProperties.GetName(x) == name);
+        Assert(!Choice("Направление").IsEnabled && Equals(Choice("Направление").SelectedItem, "Автоматически"), "default urgency direction is automatic");
         Choice("Порядок").SelectedIndex = 2; Choice("Направление").SelectedIndex = 1;
         SaveImage(main, "issue-13-filters.png");
         Descendants<Button>(view).Single(x => Equals(x.Content, "Применить")).RaiseEvent(new(Button.ClickEvent)); await UntilAsync(() => !((FrameworkElement)main.FindName("TaskPanelOverlay")).IsVisible);
@@ -56,6 +57,15 @@ internal static partial class UiScenario
         await ExecuteAsync(model.HistoryCommand, model);
         Assert(model.IsCompleted && model.Settings.Sort == TaskSort.Urgency, "history has independent completed defaults");
         await ExecuteAsync(model.ActiveCommand, model); Assert(model.Settings.Sort == TaskSort.Estimate, "returning restores task settings");
+        await model.ApplySettingsAsync(new(Status: TaskStatusFilter.Incomplete));
+        model.Selected = model.Tasks.Single(x => x.Item.Id == a.Id); await ExecuteAsync(model.CompleteCommand, model);
+        var heldIndex = model.Tasks.IndexOf(model.Selected!);
+        var other = model.Tasks.First(x => x.Item.Id != a.Id).Item;
+        service.Edit(other.Id, "Изменена другая задача", ""); await model.EditorSavedAsync(other.Id, false);
+        Assert(model.Tasks.Any(x => x.Item.Id == a.Id) && model.Tasks[heldIndex].Item.Id == a.Id, "saving another task retains just-completed card and its position");
+        await model.ApplySettingsAsync(new(Status: TaskStatusFilter.Completed));
+        await model.SelectTaskAsync(other.Id);
+        Assert(model.Selected?.Item.Id == other.Id && service.ReadTaskListSettings(TaskSection.Tasks).Status == TaskStatusFilter.Completed, "notification opens exact filtered-out task without replacing saved settings");
         main.Close();
     }
 }

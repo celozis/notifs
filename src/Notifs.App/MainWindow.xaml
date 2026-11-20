@@ -17,11 +17,13 @@
     </Border>
     <Grid x:Name="Workspace" Grid.Column="1" Margin="25,30,25,16">
       <Grid.RowDefinitions><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+      <ScrollViewer x:Name="BrowseScroll" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
       <Grid x:Name="BrowseView">
         <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
         <StackPanel Margin="0,0,0,18"><TextBlock Text="{Binding PageTitle}" FontSize="29" FontWeight="SemiBold"/><TextBlock Text="{Binding Subtitle}" FontSize="13" Foreground="{DynamicResource MutedInk}" Margin="0,8,0,0"/>
           <ContentControl x:Name="CalendarHeader" HorizontalContentAlignment="Stretch" Visibility="Collapsed"/>
           <WrapPanel Margin="0,16,0,0"><TextBlock Text="{Binding SortLabel}" FontSize="12" VerticalAlignment="Center" Margin="0,0,16,8"/><Button x:Name="OpenFilters" Content="Фильтры и сортировка" Command="{Binding FiltersCommand, RelativeSource={RelativeSource AncestorType=Window}}" FontSize="12" Margin="0,0,0,8"/></WrapPanel>
+          <UniformGrid x:Name="MonthWeekdays" Columns="7" Visibility="Collapsed" Margin="0,8,16,0"><TextBlock Text="ПН" FontSize="11" HorizontalAlignment="Center"/><TextBlock Text="ВТ" FontSize="11" HorizontalAlignment="Center"/><TextBlock Text="СР" FontSize="11" HorizontalAlignment="Center"/><TextBlock Text="ЧТ" FontSize="11" HorizontalAlignment="Center"/><TextBlock Text="ПТ" FontSize="11" HorizontalAlignment="Center"/><TextBlock Text="СБ" FontSize="11" HorizontalAlignment="Center"/><TextBlock Text="ВС" FontSize="11" HorizontalAlignment="Center"/></UniformGrid>
         </StackPanel>
         <Border Grid.Row="1" Visibility="{Binding HasError, Converter={StaticResource BoolVisibility}}" BorderBrush="{DynamicResource Danger}" BorderThickness="1" Padding="10" Margin="0,0,0,12" CornerRadius="8"><StackPanel><TextBlock Text="{Binding Error}" Foreground="{DynamicResource Danger}" AutomationProperties.LiveSetting="Assertive"/><Button Content="Повторить" Command="{Binding RefreshCommand}" HorizontalAlignment="Left" Margin="0,8,0,0"/></StackPanel></Border>
         <ScrollViewer x:Name="MonthHost" Grid.Row="2" Visibility="Collapsed" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"/>
@@ -74,6 +76,7 @@
           </Border>
         </Grid>
       </Grid>
+      </ScrollViewer>
       <ContentControl x:Name="EditorHost" Visibility="Collapsed" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"/>
       <ContentControl x:Name="SettingsHost" Visibility="Collapsed" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"/>
       <ContentControl x:Name="RemindersHost" Visibility="Collapsed" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"/>
