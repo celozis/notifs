@@ -19,6 +19,7 @@ public sealed partial class TaskService
 {
     // false removes all sources for an entity; true removes personal + summary mentions only.
     public event Action<EntityKey, bool>? TaskNotificationsChanged;
+    public event Action<Guid>? PersonalScheduleChanged;
 
     public PersonalReminderState? ReadPersonal(Guid id)
     {
@@ -45,10 +46,15 @@ public sealed partial class TaskService
         command.ExecuteNonQuery();
     }
 
-    private void SavePersonal(SqliteConnection connection, SqliteTransaction transaction, Guid id, PersonalSchedule? schedule)
+    private bool SavePersonal(SqliteConnection connection, SqliteTransaction transaction, Guid id, PersonalSchedule? schedule)
     {
         var old = ReadPersonal(connection, transaction, id);
-        if (old?.Schedule == schedule) return; // Unrelated edits never restart a consumed occurrence/snooze.
+        if (old?.Schedule == schedule) return false; // Unrelated edits never restart a consumed occurrence/snooze.
+        using (var pending = connection.CreateCommand())
+        {
+            pending.Transaction = transaction; pending.CommandText = "DELETE FROM pending_notifications WHERE kind=$kind AND subject_type='task' AND subject_id=$id";
+            pending.Parameters.AddWithValue("$kind", (int)NotificationKind.Personal); pending.Parameters.AddWithValue("$id", id.ToString()); pending.ExecuteNonQuery();
+        }
         if (schedule is null)
         {
             using var command = connection.CreateCommand();
@@ -62,6 +68,7 @@ public sealed partial class TaskService
             var first = schedule.Resolve(time.LocalTimeZone);
             WritePersonal(connection, transaction, id, new(schedule, first, first, old?.SnoozedUntil));
         }
+        return true;
     }
 
     public NotificationSettings ReadNotificationSettings()
@@ -117,9 +124,12 @@ public sealed partial class TaskService
 
     public IReadOnlyList<NotificationEvent> PollPersonal()
     {
-        var now = time.GetUtcNow();
-        using var connection = Open();
-        using var transaction = connection.BeginTransaction();
+        using var connection = Open(); using var transaction = connection.BeginTransaction();
+        var result = PollPersonal(connection, transaction, time.GetUtcNow());
+        transaction.Commit(); return result;
+    }
+    private IReadOnlyList<NotificationEvent> PollPersonal(SqliteConnection connection, SqliteTransaction transaction, DateTimeOffset now)
+    {
         using var command = connection.CreateCommand();
         command.Transaction = transaction;
         command.CommandText = "SELECT t.id,t.title,t.created_at,p.data FROM tasks t JOIN personal_reminders p ON p.task_id=t.id WHERE t.completed_at IS NULL ORDER BY t.created_at,t.id";
@@ -150,7 +160,6 @@ public sealed partial class TaskService
             events.Add(new(Guid.NewGuid(), NotificationKind.Personal, entry.Id.ToString(), [new(new("task", entry.Id), entry.Title, age)],
                 [new("complete", "Готово"), new("snooze", "Отложить")]));
         }
-        transaction.Commit();
         return events;
     }
 }

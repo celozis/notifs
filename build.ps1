@@ -2,7 +2,8 @@
 param(
     [switch]$Bootstrap,
     [switch]$Test,
-    [switch]$Run
+    [switch]$Run,
+    [switch]$Publish
 )
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
@@ -10,9 +11,9 @@ Push-Location $PSScriptRoot
 try {
     $localSdk = Join-Path $PSScriptRoot '.scratch/dotnet/dotnet.exe'
     $dotnetCommand = Get-Command dotnet -ErrorAction SilentlyContinue
-    if (Test-Path -LiteralPath $localSdk) {
+    if ((Test-Path -LiteralPath $localSdk) -and ((& $localSdk --list-sdks) -match '^10\.0\.404 ')) {
         $notifsDotnet = $localSdk
-    } elseif ($dotnetCommand -and ((& $dotnetCommand.Source --list-sdks) -match '^10\.0\.')) {
+    } elseif ($dotnetCommand -and ((& $dotnetCommand.Source --list-sdks) -match '^10\.0\.404 ')) {
         $notifsDotnet = $dotnetCommand.Source
     } elseif ($Bootstrap) {
         $toolsDirectory = Join-Path $PSScriptRoot '.scratch/tools'
@@ -28,8 +29,9 @@ try {
     $env:DOTNET_CLI_TELEMETRY_OPTOUT = '1'
     & $notifsDotnet restore Notifs.slnx --locked-mode
     if ($LASTEXITCODE -ne 0) { throw 'Не удалось восстановить зависимости.' }
-    & $notifsDotnet build Notifs.slnx --configuration Release --no-restore
+    & $notifsDotnet build Notifs.slnx --configuration Release --no-restore -m:1
     if ($LASTEXITCODE -ne 0) { throw 'Ошибка сборки.' }
+    if ($Publish) { & (Join-Path $PSScriptRoot 'scripts/publish.ps1') -Dotnet $notifsDotnet }
     if ($Test) {
         & $notifsDotnet run --project tests/Notifs.Scenarios --configuration Release --no-build
         if ($LASTEXITCODE -ne 0) { throw 'Сценарная проверка не пройдена.' }

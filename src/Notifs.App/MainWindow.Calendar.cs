@@ -22,6 +22,7 @@ public partial class MainWindow
     {
         CalendarCommand = new(async () => { if (editor?.PersistDraft() == false) return; CloseEditor(); showingDetails = false; await model.OpenCalendarAsync(); AdaptLayout(); }, CanNavigate);
         model.CalendarChanged += RenderCalendar;
+        InitializeCalendarRange();
     }
     private Button ActionButton(string text, Func<Task> action, string? name = null)
     {
@@ -67,6 +68,7 @@ public partial class MainWindow
         toolbar.Children.Add(new TextBlock { Text = state.IsMonth ? state.Month.ToString("MMMM yyyy 'г.'", CalendarCulture) : monday.ToString("d MMMM", CalendarCulture) + " — " + monday.AddDays(6).ToString("d MMMM yyyy", CalendarCulture), FontSize = state.IsMonth ? 22 : 13, Margin = new(10, 8, 16, 8), VerticalAlignment = VerticalAlignment.Center });
         toolbar.Children.Add(ActionButton(state.IsMonth ? "К неделе" : "Открыть календарь", async () => await MoveCalendarAsync(state with { IsMonth = !state.IsMonth }, state.SelectedDay)));
         header.Children.Add(toolbar);
+        AddRangeFields(header);
         if (!state.IsMonth)
         {
             var week = new UniformGrid { Columns = 7, Margin = new(0, 6, 0, 8) };
@@ -76,8 +78,8 @@ public partial class MainWindow
             }
             header.Children.Add(week);
             var selection = new WrapPanel { Margin = new(0, 6, 0, 0) };
-            selection.Children.Add(new TextBlock { Text = state.WholeWeek ? "Вся неделя · " + monday.ToString("d MMMM", CalendarCulture) + " — " + monday.AddDays(6).ToString("d MMMM", CalendarCulture) : state.SelectedDay.ToString("d MMMM yyyy", CalendarCulture), FontSize = 13, Margin = new(0, 8, 16, 8), VerticalAlignment = VerticalAlignment.Center });
-            selection.Children.Add(ActionButton("Вся неделя", async () => await MoveCalendarAsync(state with { WholeWeek = true })));
+            selection.Children.Add(new TextBlock { Text = state.RangeStart != null ? PeriodLabel(state.Period) : state.WholeWeek ? "Вся неделя · " + monday.ToString("d MMMM", CalendarCulture) + " — " + monday.AddDays(6).ToString("d MMMM", CalendarCulture) : state.SelectedDay.ToString("d MMMM yyyy", CalendarCulture), FontSize = 13, Margin = new(0, 8, 16, 8), VerticalAlignment = VerticalAlignment.Center });
+            selection.Children.Add(ActionButton("Вся неделя", async () => await MoveCalendarAsync(state with { WholeWeek = true, RangeStart = null, RangeEnd = null })));
             header.Children.Add(selection);
         }
         CalendarHeader.Content = header;
@@ -93,7 +95,7 @@ public partial class MainWindow
     }
     private Button DayButton(DateOnly date, bool month)
     {
-        var state = model.Calendar; var entries = model.CalendarDay(date);
+        var state = model.Calendar; var entries = model.CalendarEntries(new(date, date));
         var selected = state.Period.Contains(date);
         var today = date == model.Service.Today;
         var button = new Button { Tag = date, Margin = new(0, 0, 6, 6), Padding = new(month ? 5 : 2), Height = month ? 118 : 76, HorizontalContentAlignment = HorizontalAlignment.Stretch, VerticalContentAlignment = VerticalAlignment.Top, MinWidth = 0, MinHeight = month ? 118 : 76,
@@ -118,14 +120,16 @@ public partial class MainWindow
             foreach (var entry in entries.Take(3))
             {
                 var line = new Grid { Margin = new(0, 0, 0, 3), Height = 19 }; line.ColumnDefinitions.Add(new() { Width = new(19) }); line.ColumnDefinitions.Add(new());
-                line.Children.Add(new RankBadge { Rank = entry.Task.Rank, Width = 18, Height = 19 });
-                var title = new TextBlock { Text = (entry.Task.CompletedAt != null ? "✓ " : "") + entry.Task.Title, FontSize = 10, TextWrapping = TextWrapping.NoWrap, TextTrimming = TextTrimming.CharacterEllipsis, VerticalAlignment = VerticalAlignment.Center, Margin = new(4, 0, 0, 0), Foreground = (Brush)FindResource(entry.Task.CompletedAt != null ? "MutedInk" : "Ink"), TextDecorations = entry.Task.CompletedAt != null ? TextDecorations.Strikethrough : null }; Grid.SetColumn(title, 1); line.Children.Add(title); content.Children.Add(line);
+                if (entry.Task is { } ordinary) line.Children.Add(new RankBadge { Rank = ordinary.Rank, Width = 18, Height = 19 }); else line.Children.Add(new TextBlock { Text = "↻", FontSize = 14, Foreground = (Brush)FindResource("Primary") });
+                var title = new TextBlock { Text = (entry.IsCompleted ? "✓ " : "") + entry.Title, FontSize = 10, TextWrapping = TextWrapping.NoWrap, TextTrimming = TextTrimming.CharacterEllipsis, VerticalAlignment = VerticalAlignment.Center, Margin = new(4, 0, 0, 0), Foreground = (Brush)FindResource(entry.IsCompleted ? "MutedInk" : "Ink"), TextDecorations = entry.IsCompleted ? TextDecorations.Strikethrough : null }; Grid.SetColumn(title, 1); line.Children.Add(title); content.Children.Add(line);
             }
             if (entries.Count > 3) content.Children.Add(new TextBlock { Text = $"Ещё {entries.Count - 3}", FontSize = 10, LineHeight = 14, Foreground = (Brush)FindResource("MutedInk") });
         }
-        button.Content = content; button.Command = new AsyncCommand(async () => { if (month) await ShowCalendarDayAsync(date); else await MoveCalendarAsync(state with { SelectedDay = date, WholeWeek = false }, date); }, CanNavigate);
+        if (month) button.PreviewMouseLeftButtonDown += (_, args) => { if (!CanNavigate()) return; rangeAnchor = rangePointer = date; Mouse.Capture(MonthHost, CaptureMode.SubTree); args.Handled = true; };
+        button.Content = content; button.Command = new AsyncCommand(async () => { if (month) await ShowCalendarDayAsync(date); else await MoveCalendarAsync(state with { SelectedDay = date, WholeWeek = false, RangeStart = null, RangeEnd = null }, date); }, CanNavigate);
         button.PreviewKeyDown += async (_, args) =>
         {
+            if (month && await HandleRangeKeyAsync(date, args)) { args.Handled = true; return; }
             var offset = args.Key switch { Key.Left => -1, Key.Right => 1, Key.Up => -7, Key.Down => 7, _ => 0 };
             if (offset == 0) return; args.Handled = true;
             var next = date.AddDays(offset); if (next.Year is < 2 or > 9998) return;
@@ -134,38 +138,40 @@ public partial class MainWindow
         };
         dayButtons[date] = button; return button;
     }
-    public async Task ShowCalendarDayAsync(DateOnly day)
+    public Task ShowCalendarDayAsync(DateOnly day) => ShowCalendarPeriodAsync(new(day, day));
+    public async Task ShowCalendarPeriodAsync(CalendarPeriod period)
     {
+        var day = period.Start;
         if (!CanNavigate()) return;
-        if (!await model.ChangeCalendarAsync(model.Calendar with { SelectedDay = day, WholeWeek = false })) return;
+        if (!await model.ChangeCalendarAsync(model.Calendar with { SelectedDay = day, WholeWeek = false, RangeStart = period.Start == period.End ? null : period.Start, RangeEnd = period.Start == period.End ? null : period.End })) return;
         FocusDay(day);
-        var panel = new Grid(); panel.RowDefinitions.Add(new() { Height = GridLength.Auto }); panel.RowDefinitions.Add(new()); panel.RowDefinitions.Add(new() { Height = GridLength.Auto });
+        var panel = new Grid(); panel.RowDefinitions.Add(new() { Height = GridLength.Auto }); panel.RowDefinitions.Add(new() { Height = GridLength.Auto }); panel.RowDefinitions.Add(new() { Height = GridLength.Auto });
         var title = new DockPanel { Margin = new(0, 0, 0, 18) };
         var close = ActionButton("×", () => { CloseTaskPanel(); return Task.CompletedTask; }, "Закрыть день"); DockPanel.SetDock(close, Dock.Right); title.Children.Add(close);
-        title.Children.Add(new TextBlock { Text = FullDate(day), FontSize = 22, FontWeight = FontWeights.SemiBold, VerticalAlignment = VerticalAlignment.Center }); panel.Children.Add(title);
-        var rows = new StackPanel(); var entries = model.CalendarDay(day);
-        if (entries.Count == 0) rows.Children.Add(new TextBlock { Text = "В этот день нет задач с текущими фильтрами.", FontSize = 14, Margin = new(0, 16, 0, 16) });
+        title.Children.Add(new TextBlock { Text = PeriodLabel(period), FontSize = 22, FontWeight = FontWeights.SemiBold, VerticalAlignment = VerticalAlignment.Center }); panel.Children.Add(title);
+        var rows = new StackPanel(); var entries = model.CalendarEntries(period);
+        if (entries.Count == 0) rows.Children.Add(new TextBlock { Text = "В этом периоде нет задач с текущими фильтрами.", FontSize = 14, Margin = new(0, 16, 0, 16) });
         foreach (var entry in entries)
         {
-            var row = new StackPanel(); var name = new TextBlock { Text = (entry.Task.CompletedAt != null ? "✓ " : "") + entry.Task.Title, FontSize = 15, FontWeight = FontWeights.SemiBold, TextDecorations = entry.Task.CompletedAt != null ? TextDecorations.Strikethrough : null }; row.Children.Add(name);
-            var metadata = new WrapPanel { Margin = new(0, 10, 0, 8) }; metadata.Children.Add(new RankBadge { Rank = entry.Task.Rank }); metadata.Children.Add(new TextBlock { Text = new TaskRow(entry.Task, model.Service).MetadataLabel, FontSize = 11, Margin = new(8, 4, 0, 0) }); row.Children.Add(metadata);
-            row.Children.Add(new TextBlock { Text = ReasonLabel(entry.Reasons), FontSize = 11, Foreground = (Brush)FindResource("MutedInk") });
+            var row = new StackPanel(); var name = new TextBlock { Text = (entry.IsCompleted ? "✓ " : "") + entry.Title, FontSize = 15, FontWeight = FontWeights.SemiBold, TextDecorations = entry.IsCompleted ? TextDecorations.Strikethrough : null }; row.Children.Add(name);
+            var metadata = new WrapPanel { Margin = new(0, 10, 0, 8) }; if (entry.Task is { } ordinary) metadata.Children.Add(new RankBadge { Rank = ordinary.Rank }); metadata.Children.Add(new TextBlock { Text = entry.Task != null ? new TaskRow(entry.Task, model.Service).MetadataLabel : new CalendarReminderRow(entry, model.Service).MetadataLabel, FontSize = 11, Margin = new(8, 4, 0, 0) }); row.Children.Add(metadata);
+            row.Children.Add(new TextBlock { Text = entry.Reasons, FontSize = 11, Foreground = (Brush)FindResource("MutedInk") });
             var task = new Button { Content = row, Padding = new(16), HorizontalContentAlignment = HorizontalAlignment.Stretch, Margin = new(0, 0, 0, 10) };
-            AutomationProperties.SetName(task, entry.Task.Title + ", " + ReasonLabel(entry.Reasons));
-            task.Command = new AsyncCommand(() => GoToCalendarDayAsync(day, entry.Task.Id), () => !model.IsBusy); rows.Children.Add(task);
+            AutomationProperties.SetName(task, entry.Title + ", " + entry.Reasons);
+            task.Command = new AsyncCommand(() => entry.Reminder is { } reminder ? OpenCalendarReminderAsync(reminder.ScheduleId) : GoToCalendarDayAsync(day, entry.Task!.Id), () => !model.IsBusy); rows.Children.Add(task);
         }
-        var scroll = new ScrollViewer { Content = rows, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled }; Grid.SetRow(scroll, 1); panel.Children.Add(scroll);
-        var go = ActionButton("Перейти к этому дню", async () => await GoToCalendarDayAsync(day)); go.Style = (Style)FindResource("PrimaryButton"); go.HorizontalAlignment = HorizontalAlignment.Right; go.Margin = new(0, 16, 0, 0); Grid.SetRow(go, 2); panel.Children.Add(go);
+        var scroll = new ScrollViewer { Content = rows, MaxHeight = Math.Max(60, Math.Min(600, Shell.ActualHeight - 220)), VerticalScrollBarVisibility = ScrollBarVisibility.Auto, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled }; Grid.SetRow(scroll, 1); panel.Children.Add(scroll);
+        var go = ActionButton(period.Start == period.End ? "Перейти к этому дню" : "Перейти к этому периоду", async () => await GoToCalendarDayAsync(day)); go.Style = (Style)FindResource("PrimaryButton"); go.HorizontalAlignment = HorizontalAlignment.Right; go.Margin = new(0, 16, 0, 0); Grid.SetRow(go, 2); panel.Children.Add(go);
         ShowTaskPanel(panel, () => FocusDay(day)); close.Focus();
     }
     private async Task GoToCalendarDayAsync(DateOnly day, Guid? task = null)
     {
         if (model.IsBusy) return;
         CloseTaskPanel();
-        if (!await model.ChangeCalendarAsync(new(new(day.Year, day.Month, 1), day))) return;
+        if (!await model.ChangeCalendarAsync(model.Calendar with { Month = new(day.Year, day.Month, 1), SelectedDay = day, IsMonth = false })) return;
         if (task != null) { model.Selected = model.Tasks.FirstOrDefault(x => x.Item.Id == task); showingDetails = true; }
         else showingDetails = false;
         AdaptLayout(); await Dispatcher.InvokeAsync(() => { if (task == null) FocusDay(day); else FocusSelected(); }, System.Windows.Threading.DispatcherPriority.ApplicationIdle);
     }
-    public static string ReasonLabel(CalendarReason reasons) => string.Join(" · ", new[] { (CalendarReason.Created, "Создана"), (CalendarReason.Deadline, "Дедлайн"), (CalendarReason.EstimatedSpan, "Расчётный промежуток") }.Where(x => reasons.HasFlag(x.Item1)).Select(x => x.Item2));
+    public static string ReasonLabel(CalendarReason reasons) => TaskService.CalendarReasonText(reasons);
 }

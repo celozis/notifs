@@ -20,6 +20,8 @@ public sealed class MarkdownView : FlowDocumentScrollViewer
     public string Source { get => (string)GetValue(SourceProperty); set => SetValue(SourceProperty, value); }
     public MarkdownView()
     {
+        FontSize = 16;
+        Foreground = (Brush)Application.Current.FindResource("Ink");
         IsToolBarVisible = false;
         VerticalScrollBarVisibility = ScrollBarVisibility.Auto;
         HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled;
@@ -28,8 +30,8 @@ public sealed class MarkdownView : FlowDocumentScrollViewer
     }
     private void Render()
     {
-        var document = new FlowDocument { FontFamily = (FontFamily)FindResource("BodyFont"), FontSize = 16, LineHeight = 26,
-            PagePadding = new Thickness(0, 8, 8, 24), Foreground = (Brush)FindResource("Ink") };
+        var document = new FlowDocument { FontFamily = (FontFamily)FindResource("BodyFont"), FontSize = FontSize, LineHeight = FontSize * 1.8,
+            PagePadding = new Thickness(0), Foreground = Foreground };
         foreach (var block in Markdown.Parse(Source ?? "", Pipeline)) document.Blocks.Add(ConvertBlock(block));
         Document = document;
     }
@@ -39,9 +41,10 @@ public sealed class MarkdownView : FlowDocumentScrollViewer
         {
             case HeadingBlock heading:
                 var h = ParagraphFrom(heading.Inline);
-                h.FontSize = heading.Level switch { 1 => 26, 2 => 22, _ => 18 };
+                h.FontSize = FontSize * (heading.Level switch { 1 => 1.625, 2 => 1.375, _ => 16.0 / 13 });
                 h.FontWeight = FontWeights.SemiBold;
-                h.Margin = new Thickness(0, 16, 0, 8);
+                h.Foreground = (Brush)FindResource("Ink");
+                h.Margin = new Thickness(0, 0, 0, 10);
                 return h;
             case ParagraphBlock paragraph:
                 return ParagraphFrom(paragraph.Inline);
@@ -55,7 +58,12 @@ public sealed class MarkdownView : FlowDocumentScrollViewer
                 foreach (ListItemBlock item in list)
                 {
                     var entry = new ListItem();
-                    foreach (var child in item) entry.Blocks.Add(ConvertBlock(child));
+                    foreach (var child in item)
+                    {
+                        var converted = ConvertBlock(child);
+                        if (!list.IsLoose && converted is Paragraph) converted.Margin = new Thickness(0);
+                        entry.Blocks.Add(converted);
+                    }
                     result.ListItems.Add(entry);
                 }
                 return result;

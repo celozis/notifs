@@ -28,14 +28,19 @@ public sealed class NotificationDelivery(INotificationOutput output, TimeProvide
         }
         Show(notification);
     }
+    public void ReceiveSuppressed(NotificationEvent notification, bool sound)
+    {
+        if (notification.Subjects.Count != 0 && received.Add(notification.Id)) SoundOnArrival(sound);
+    }
 
     public void SetHovered(bool value)
     {
         hovered = value;
-        if (value) return;
-        var pending = waiting.ToArray();
+        if (value || waiting.Count == 0) return;
+        visible.AddRange(waiting);
         waiting.Clear();
-        foreach (var item in pending) Show(item);
+        if (visible.Count > 2) visible.RemoveRange(0, visible.Count - 2);
+        output.Render(visible.ToArray());
     }
 
     private void Show(NotificationEvent notification)
@@ -60,12 +65,12 @@ public sealed class NotificationDelivery(INotificationOutput output, TimeProvide
 
     public void HideAll() { visible.Clear(); waiting.Clear(); output.Render([]); }
 
-    public void RemoveSubject(EntityKey key, bool personalOnly)
+    public void RemoveSubject(EntityKey key, bool personalOnly, NotificationKind? onlyKind = null)
     {
         for (var index = waiting.Count - 1; index >= 0; index--)
         {
             var item = waiting[index];
-            var updated = WithoutSubject(item, key, personalOnly);
+            var updated = WithoutSubject(item, key, personalOnly, onlyKind);
             if (updated is null) waiting.RemoveAt(index);
             else waiting[index] = updated;
         }
@@ -73,7 +78,7 @@ public sealed class NotificationDelivery(INotificationOutput output, TimeProvide
         for (var index = visible.Count - 1; index >= 0; index--)
         {
             var item = visible[index];
-            var updated = WithoutSubject(item, key, personalOnly);
+            var updated = WithoutSubject(item, key, personalOnly, onlyKind);
             if (ReferenceEquals(updated, item)) continue;
             changed = true;
             if (updated is null) visible.RemoveAt(index);
@@ -82,10 +87,12 @@ public sealed class NotificationDelivery(INotificationOutput output, TimeProvide
         if (changed) output.Render(visible.ToArray());
     }
 
-    private static NotificationEvent? WithoutSubject(NotificationEvent item, EntityKey key, bool personalOnly)
+    private static NotificationEvent? WithoutSubject(NotificationEvent item, EntityKey key, bool personalOnly, NotificationKind? onlyKind)
     {
-        if (personalOnly && item.Kind is not (NotificationKind.Personal or NotificationKind.Summary)) return item;
-        var remaining = item.Subjects.Where(x => x.Key != key).ToArray();
+        if (onlyKind != null && item.Kind != onlyKind && item.Kind != NotificationKind.Missed) return item;
+        if (personalOnly && item.Kind is not (NotificationKind.Personal or NotificationKind.Summary or NotificationKind.Missed)) return item;
+        var remaining = item.Subjects.Where(x => x.Key != key || (personalOnly && x.Origin == NotificationKind.CheckIn) ||
+            (onlyKind != null && item.Kind == NotificationKind.Missed && x.Origin != onlyKind)).ToArray();
         return remaining.Length == 0 ? null : remaining.Length == item.Subjects.Count ? item : item with { Subjects = remaining };
     }
 }

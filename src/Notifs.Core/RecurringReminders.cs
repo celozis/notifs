@@ -25,7 +25,7 @@ public sealed partial class TaskService
                 result.Add(new(item.Id, debt.Id, item.Title, ReminderCalendarKind.Current, debt.DueAt));
             foreach (var done in item.History.Where(x => InRange(x.CompletedAt) || InRange(x.DueAt)))
                 result.Add(new(item.Id, done.OccurrenceId, item.Title, ReminderCalendarKind.Completed, done.DueAt, done.CompletedAt));
-            if (!item.RequiresCompletion) continue;
+            if (!item.RequiresCompletion || !item.Enabled) continue;
             if (item.Schedule.Repeat == SignalRepeat.AfterCompletion)
             {
                 if (item.Current is null && item.NextAt is { } next && next > now && InRange(next))

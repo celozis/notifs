@@ -56,6 +56,7 @@ public sealed class DesktopLifetime : IDisposable
     {
         if (closed) return true;
         if (notifications.IsBusy) return false;
+        if (!main.PrepareExit()) return false;
         exiting = true;
         main.Close();
         if (!closed) { exiting = false; Show(); return false; }

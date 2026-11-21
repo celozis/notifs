@@ -1,6 +1,6 @@
 <UserControl x:Class="Notifs.App.SettingsView" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
   <Grid><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
-    <StackPanel Margin="0,0,0,26"><TextBlock Text="Настройки" FontSize="29" FontWeight="SemiBold"/><TextBlock Text="Спокойная работа — по твоим правилам." Style="{StaticResource MutedText}" Margin="0,8,0,0"/></StackPanel>
+    <StackPanel Margin="0,0,0,26"><TextBlock Text="Настройки" FontSize="{DynamicResource PageHeadingSize}" FontWeight="SemiBold"/><TextBlock Text="Спокойная работа — по твоим правилам." Style="{StaticResource MutedText}" Margin="0,8,0,0"/></StackPanel>
     <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
       <Grid x:Name="Sections" IsEnabled="{Binding CanEdit}" VerticalAlignment="Top">
         <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition x:Name="SectionGap" Width="18"/><ColumnDefinition x:Name="SecondColumn" Width="*"/></Grid.ColumnDefinitions>
@@ -9,9 +9,11 @@
           <StackPanel>
             <TextBlock Text="Уведомления" FontSize="16" FontWeight="SemiBold"/>
             <TextBlock Text="Карточки не забирают фокус и остаются до закрытия." Style="{StaticResource MutedText}" Margin="0,10,0,20"/>
+            <Label Content="Показывать на мониторе"/><ComboBox ItemsSource="{Binding Monitors}" SelectedIndex="{Binding MonitorMode}" DisplayMemberPath="Name" Style="{StaticResource FilterChoice}" AutomationProperties.Name="Фиксированный монитор" Margin="0,0,0,14"/>
+            <Label Content="Монитор для полноэкранного режима"/><ComboBox ItemsSource="{Binding AdditionalMonitors}" SelectedItem="{Binding FullscreenMonitor}" DisplayMemberPath="Name" Style="{StaticResource FilterChoice}" AutomationProperties.Name="Монитор для полноэкранного режима" Margin="0,0,0,20"/>
             <Label Content="Обычное откладывание, минут" Target="{Binding ElementName=SnoozeInput}"/><TextBox x:Name="SnoozeInput" Text="{Binding SnoozeMinutes, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="Обычное откладывание в минутах"/>
             <CheckBox IsChecked="{Binding Sound}" Margin="0,20,0,12" AutomationProperties.Name="Короткий негромкий звук"><TextBlock Text="Короткий негромкий звук" FontSize="13"/></CheckBox>
-            <TextBlock Text="До двух карточек на основном мониторе. Новая появляется снизу." Style="{StaticResource MutedText}"/>
+            <TextBlock Text="До двух карточек. При наведении они не перемещаются. Без доступного дополнительного экрана в полноэкранном режиме остаётся звук." Style="{StaticResource MutedText}"/>
           </StackPanel>
         </Border>
         <Border x:Name="SummarySection" Grid.Column="2" Background="{DynamicResource Surface}" BorderBrush="{DynamicResource Line}" BorderThickness="1" CornerRadius="12" Padding="22">

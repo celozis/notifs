@@ -1,0 +1,151 @@
+{
+  "sourceReference": "f0462998e790e7fd9b4efce4ed8e0a4722875b71",
+  "fixture": "2026-11-18 12:00 UTC+05; later states 12:40/13:40",
+  "method": "WPF RenderTargetBitmap; physical monitor 1920x1080 at 96 DPI; actual client dimensions below",
+  "screens": [
+    {
+      "name": "check-in.png",
+      "width": 365,
+      "height": 313,
+      "dpi": 96,
+      "sha256": "2bcb45194223e18d5bdfe8f8e49b374764c79f0cb68c6d2e5eeaeee2c4556b09",
+      "referenceSha256": "6a81c94c86200c3489800aee34ee0ad4bdfb803cc46e1b73001e0bdd93228210"
+    },
+    {
+      "name": "delete-confirmation.png",
+      "width": 1010,
+      "height": 1060,
+      "dpi": 96,
+      "sha256": "9e5333adad3540483c987adeab229a17900d81df2ed30299fd00795d8f303ed2",
+      "referenceSha256": "911aec26aa3333a9785e987365f592a635b7e1a0ebc409ac68e91408035042ec"
+    },
+    {
+      "name": "editor.png",
+      "width": 1010,
+      "height": 1060,
+      "dpi": 96,
+      "sha256": "6a6dab62c8a2e04b69e973a07929b167f647fa8388bac148fd238991b4b70a42",
+      "referenceSha256": "4cdadcde18fa740afeb4a6459f7a1d96c877fcb4a3d50d4bc2f1b23612ade376"
+    },
+    {
+      "name": "filters.png",
+      "width": 1010,
+      "height": 1060,
+      "dpi": 96,
+      "sha256": "a0329b538489848cda89a12bb5ed48457dd03ee5b573dcd4eb67d87afef4f592",
+      "referenceSha256": "0d1b33e02011397a4982e821651d71cd450c86dd050edf9f3a8a7b1499b17d49"
+    },
+    {
+      "name": "in-progress.png",
+      "width": 1010,
+      "height": 1060,
+      "dpi": 96,
+      "sha256": "c029b9504905ff2d9b045c8afab2088f38f1f5c2805a42cd10f4e52f5f5e2b34",
+      "referenceSha256": "4e4dce7f4be3c9e77ce163abfec724596e326105de3e1b5282e42d544ae09931"
+    },
+    {
+      "name": "markdown-editor.png",
+      "width": 1010,
+      "height": 1060,
+      "dpi": 96,
+      "sha256": "73fcb5bcd5fed9c8932d0cc69222d45f310f7a4d540fa64004f56cb9dc9071f2",
+      "referenceSha256": "8eaadff7bfae22897524e28f23877329ea0ae285c66d4a42fc94803f544285e0"
+    },
+    {
+      "name": "month.png",
+      "width": 1010,
+      "height": 1061,
+      "dpi": 96,
+      "sha256": "61946caed837f15c9bcdec8bf592477d8ce5c94ec7e1612557b0b0e8cb6fcf12",
+      "referenceSha256": "5d1ea8f1db8c7001c5c13bc79a61aed17cc6bee24be820789f4aa874b3c9e0b4"
+    },
+    {
+      "name": "notifications.png",
+      "width": 365,
+      "height": 464,
+      "dpi": 96,
+      "sha256": "3c24d4f7d6bad3a5ff297c9e6087ded31a15c9d000003e2de030b01c15bfc05a",
+      "referenceSha256": "8a719a86c1eb4c404525bea55478db1f8cf119368b2cc9734685fd93b8e9d189"
+    },
+    {
+      "name": "paused.png",
+      "width": 1010,
+      "height": 1060,
+      "dpi": 96,
+      "sha256": "0ad4b59ba3ddfab2aa98b502afe4ee63a1e512fc65433c5bc302f1c25e5e3db2",
+      "referenceSha256": "09b479610385a351bb7864ee698d759d6c4dae71e1ebd6634acaed392cc67090"
+    },
+    {
+      "name": "range.png",
+      "width": 1010,
+      "height": 1061,
+      "dpi": 96,
+      "sha256": "dab6deab496908722df9221b6d05bc46ab0d02e2e3c781366d68983e78236787",
+      "referenceSha256": "3fd4d67f4cc69a0a3ca9dd4ecc595c37996983dcbd6937f0d338619737361826"
+    },
+    {
+      "name": "reminder-editor.png",
+      "width": 1010,
+      "height": 1060,
+      "dpi": 96,
+      "sha256": "184806d73ac2181e92bd8396668396c3c3c75611e23cce68f4a3b814b385d749",
+      "referenceSha256": "e92edbd5aaa58b566ee8556c2eb17f09169a0382c925d0a14bd83c89b657964f"
+    },
+    {
+      "name": "reminders.png",
+      "width": 1010,
+      "height": 1060,
+      "dpi": 96,
+      "sha256": "40dc398a2973747ccc7b98591c8ba7cec976f1a767c5777a2a5d2b0331324421",
+      "referenceSha256": "32191d6a3b86eeae76286c23a5a96051044195a18df54a86bfc0bee1a061e86c"
+    },
+    {
+      "name": "settings.png",
+      "width": 1010,
+      "height": 1060,
+      "dpi": 96,
+      "sha256": "b13623e5a733530372ccc851ab7bdc77321cea812b50cf97ca4834cca56c7146",
+      "referenceSha256": "8573fdbce0d967dcdc0511c14f36e04633a3eb36a8ba318938c3b36a8fbc68b9"
+    },
+    {
+      "name": "tasks.png",
+      "width": 1010,
+      "height": 1060,
+      "dpi": 96,
+      "sha256": "6cfc9e65b3eb2d8b9b4f9b03b28f291a4d71dfc33898995fee45b4de2b0c0b49",
+      "referenceSha256": "86003c49c9705582d8c9ce741cf745f1f2228794f8450b44b20a41da4297e817"
+    },
+    {
+      "name": "week.png",
+      "width": 1010,
+      "height": 1061,
+      "dpi": 96,
+      "sha256": "96812ac241d7a3b426c1a0d6cd7ed8466225c2e597d86cbc75c67d723909e9b1",
+      "referenceSha256": "eb721100268d25867f1b4cbdeaad076f917837247c281ddbb5cee5bb3123a0dc"
+    },
+    {
+      "name": "width-320.png",
+      "width": 304,
+      "height": 1060,
+      "dpi": 96,
+      "sha256": "dc3e91c50658bd0d4c71a6fc23cc84d3984e5d84c010347368ebff4aac8fbb47",
+      "referenceSha256": "a9412d439af176e03849d6215739ce9dae8c739b043a6f24b25a3674d3746f7c"
+    },
+    {
+      "name": "width-375.png",
+      "width": 357,
+      "height": 1060,
+      "dpi": 96,
+      "sha256": "d8ad15a8102325761fcf16462af728d554fb6576775cdf02dcfed458be5941ed",
+      "referenceSha256": "453618db637a34abaeaf2be89cb06d539c21283c398b288c92ce2a2a64369d5e"
+    },
+    {
+      "name": "width-768.png",
+      "width": 718,
+      "height": 1060,
+      "dpi": 96,
+      "sha256": "c5460737b964634f34a7e7c841f63b6d4216d593b90a499f060d21592ebdeb8b",
+      "referenceSha256": "eaeb8494cbc6a3d70d019f77670a078724c552f38b1d1fbed9d5e706788893c4"
+    }
+  ]
+}

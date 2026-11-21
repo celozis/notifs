@@ -25,7 +25,8 @@ internal static partial class UiScenario
         await SizeAsync(main, 1010, 930);
         main.SettingsCommand.Execute(null);
         await IdleAsync();
-        var view = (SettingsView)((ContentControl)main.FindName("SettingsHost")).Content;
+        var view = new SettingsView(new SettingsViewModel(service, new IsolatedAutoStart()));
+        ((ContentControl)main.FindName("SettingsHost")).Content = view;
         var settings = (SettingsViewModel)view.DataContext;
         Assert(settings.SummaryEnabled && settings.SummaryMinutes == "180" && settings.SummaryTaskCount == "3", "summary settings use approved enabled defaults");
         settings.SummaryFirstDate = "20.11.2026";
@@ -92,13 +93,13 @@ internal static partial class UiScenario
         await UntilAsync(() => output.VisibleEvents.Count == 0 && !model.IsBusy);
         Assert(model.IsCompleted && !model.IsHistory && ((FrameworkElement)main.FindName("ListPane")).IsVisible, "open tasks shows full-list page and preserves saved filter without a hidden summary subset");
         foreach (var task in service.List()) service.Complete(task.Id);
-        clock.Advance(TimeSpan.FromHours(3)); await runtime.RunOnceAsync();
+        await AdvanceLiveAsync(clock.Advance, runtime, TimeSpan.FromHours(3));
         Assert(output.VisibleEvents.Count == 0, "empty native result produces no card");
         var longTitle = string.Join(" ", Enumerable.Repeat("Длинное название задачи", 30));
         for (var index = 0; index < 200; index++) service.Create(longTitle + index, "");
         var saved = service.ReadSummarySettings();
         service.SaveSettings(new(false, 45), saved with { TaskCount = 10 });
-        clock.Advance(TimeSpan.FromHours(3)); await runtime.RunOnceAsync(); await IdleAsync();
+        await AdvanceLiveAsync(clock.Advance, runtime, TimeSpan.FromHours(3)); await IdleAsync();
         Assert(output.VisibleEvents.Single().Subjects.Count == 10, "large native result is limited to ten tasks");
         var fullListAction = Descendants<Button>(output.Window).Single(x => Equals(x.Content, "Открыть задачи"));
         var position = fullListAction.TransformToAncestor((Visual)output.Window.Content).Transform(new Point(0, 0));
