@@ -119,8 +119,7 @@ internal static partial class UiScenario
         Assert(output.VisibleEvents.Count == 1 && output.Window.IsVisible, "simple signal stays visible after ten seconds");
         Descendants<Button>(output.Window).Single(x => Equals(x.Content, "Отложить на 30 мин")).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
         await UntilAsync(() => output.VisibleEvents.Count == 0 && service.ListSignals().Single().SnoozedUntil is not null);
-        clock.Advance(TimeSpan.FromMinutes(30));
-        await runtime.RunOnceAsync();
+        await AdvanceLiveAsync(clock.Advance, runtime, TimeSpan.FromMinutes(30));
         Assert(output.VisibleEvents.Single().Kind == NotificationKind.Signal && service.ListSignals().Single().SnoozedUntil is null, "native signal snooze routes to persisted thirty wall minutes and returns one signal");
         reminders.ToggleCommand.Execute(reminders.Signals.Single());
         await UntilAsync(() => !reminders.IsBusy && !model.IsBusy && output.VisibleEvents.Count == 0);

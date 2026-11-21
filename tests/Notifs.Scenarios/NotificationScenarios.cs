@@ -56,12 +56,24 @@ internal static class NotificationScenarios
         DraftScenarios.Check(output.Stack.Any(x => x.Id == c.Id) && output.Stack.Single(x => x.Kind == NotificationKind.Summary).Subjects.Single().Title == "Другая задача", "personal snooze removes summary row and preserves independent check-in");
         delivery.HideAll();
         DraftScenarios.Check(output.Stack.Count == 0 && output.Sounds == 1, "hide all clears visibility silently");
+        var events = Enumerable.Range(0, 5).Select(i => a with { Id = Guid.NewGuid(), SourceId = "hover-" + i }).ToArray();
+        delivery.Publish(events[0], false); delivery.Publish(events[1], false);
+        delivery.SetHovered(true);
+        foreach (var item in events.Skip(2)) delivery.Publish(item, false);
+        DraftScenarios.Check(output.Stack.Select(x => x.Id).SequenceEqual(events.Take(2).Select(x => x.Id)), "hover retains original A/B while C/D/E arrive");
+        var renders = output.Renders;
+        delivery.SetHovered(false);
+        DraftScenarios.Check(output.Renders == renders + 1 && output.Stack.Select(x => x.Id).SequenceEqual(events.Skip(3).Select(x => x.Id)), "leaving hover renders only final D/E once without replaying intermediate stacks");
+        delivery.SetHovered(true); delivery.Publish(a with { Id = Guid.NewGuid() }, false);
+        delivery.HideAll(); delivery.SetHovered(false);
+        DraftScenarios.Check(output.Stack.Count == 0, "hide all clears both hover waiting and visible cards");
     }
     private sealed class Output : INotificationOutput
     {
         public IReadOnlyList<NotificationEvent> Stack { get; private set; } = [];
         public int Sounds { get; private set; }
-        public void Render(IReadOnlyList<NotificationEvent> events) => Stack = events;
+        public int Renders { get; private set; }
+        public void Render(IReadOnlyList<NotificationEvent> events) { Stack = events; Renders++; }
         public void PlaySound() => Sounds++;
     }
     private sealed class Clock(DateTimeOffset now) : TimeProvider

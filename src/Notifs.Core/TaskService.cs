@@ -41,7 +41,7 @@ public sealed partial class TaskService(string databasePath, TimeProvider? clock
         command.Transaction = transaction;
         command.CommandText = "PRAGMA user_version";
         var version = Convert.ToInt32(command.ExecuteScalar(), CultureInfo.InvariantCulture);
-        if (version > 8) throw new IOException("Эта база создана более новой версией Notifs.");
+        if (version > 12) throw new IOException("Эта база создана более новой версией Notifs.");
         command.CommandText = """
             CREATE TABLE IF NOT EXISTS tasks (
               id TEXT PRIMARY KEY, title TEXT NOT NULL CHECK(length(trim(title)) > 0),
@@ -68,7 +68,12 @@ public sealed partial class TaskService(string databasePath, TimeProvider? clock
             CREATE TABLE IF NOT EXISTS signal_reminders (id TEXT PRIMARY KEY, data TEXT NOT NULL);
             CREATE TABLE IF NOT EXISTS task_list_settings (section TEXT PRIMARY KEY, data TEXT NOT NULL);
             CREATE TABLE IF NOT EXISTS calendar_state (slot INTEGER PRIMARY KEY CHECK(slot=1), data TEXT NOT NULL);
-            PRAGMA user_version = 8;
+            CREATE TABLE IF NOT EXISTS task_sessions (task_id TEXT PRIMARY KEY REFERENCES tasks(id) ON DELETE CASCADE, data TEXT NOT NULL);
+            CREATE UNIQUE INDEX IF NOT EXISTS one_running_session ON task_sessions((1)) WHERE json_extract(data,'$.RunningSince') IS NOT NULL;
+            CREATE TABLE IF NOT EXISTS monitor_settings (slot INTEGER PRIMARY KEY CHECK(slot=1), data TEXT NOT NULL);
+            CREATE TABLE IF NOT EXISTS runtime_checkpoint (slot INTEGER PRIMARY KEY CHECK(slot=1), last_poll TEXT NOT NULL);
+            CREATE TABLE IF NOT EXISTS pending_notifications (kind INTEGER NOT NULL, subject_type TEXT NOT NULL, subject_id TEXT NOT NULL, data TEXT NOT NULL, PRIMARY KEY(kind,subject_type,subject_id));
+            PRAGMA user_version = 12;
             """;
         command.ExecuteNonQuery();
         InitializeSummary(connection, transaction);
@@ -125,7 +130,7 @@ public sealed partial class TaskService(string databasePath, TimeProvider? clock
             command.Parameters.AddWithValue("$title", validTitle);
             command.Parameters.AddWithValue("$description", description);
             BindFields(command, deadline, estimateMinutes, rank);
-        });
+        }, updateEstimate: true);
     }
 
     private void ValidateFields(TaskDeadline? deadline, int? estimate, ImportanceRank rank)
@@ -145,25 +150,43 @@ public sealed partial class TaskService(string databasePath, TimeProvider? clock
 
     public TaskItem Complete(Guid id)
     {
-        var item = Update(id, "UPDATE tasks SET completed_at=COALESCE(completed_at,$completed) WHERE id=$id",
-            command => command.Parameters.AddWithValue("$completed", FormatTime(time.GetUtcNow())));
+        using var connection = Open(); using var transaction = connection.BeginTransaction();
+        using var command = connection.CreateCommand(); command.Transaction = transaction;
+        command.CommandText = "UPDATE tasks SET completed_at=COALESCE(completed_at,$completed) WHERE id=$id RETURNING " + Columns;
+        command.Parameters.AddWithValue("$id", id.ToString()); command.Parameters.AddWithValue("$completed", FormatTime(time.GetUtcNow()));
+        TaskItem item;
+        using (var reader = command.ExecuteReader())
+        {
+            if (!reader.Read()) throw new KeyNotFoundException("Задача больше не существует.");
+            item = ReadItem(reader); reader.Read();
+        }
+        FinishSession(connection, transaction, id); transaction.Commit();
         TaskNotificationsChanged?.Invoke(new("task", id), false);
         return item;
     }
 
     public TaskItem Restore(Guid id) => Update(id, "UPDATE tasks SET completed_at=NULL WHERE id=$id", _ => { });
 
-    private TaskItem Update(Guid id, string sql, Action<SqliteCommand> bind)
+    private TaskItem Update(Guid id, string sql, Action<SqliteCommand> bind, bool updateEstimate = false)
     {
         using var connection = Open();
+        using var transaction = connection.BeginTransaction();
+        var previousEstimate = updateEstimate ? ReadEstimate(connection, transaction, id) : null;
         using var command = connection.CreateCommand();
+        command.Transaction = transaction;
         command.CommandText = sql + " RETURNING " + Columns;
         command.Parameters.AddWithValue("$id", id.ToString());
         bind(command);
-        using var reader = command.ExecuteReader();
-        if (!reader.Read()) throw new KeyNotFoundException("Задача больше не существует. Обновите список.");
-        var item = ReadItem(reader);
-        reader.Read(); // Finish the statement before reporting a successful write.
+        TaskItem item;
+        using (var reader = command.ExecuteReader())
+        {
+            if (!reader.Read()) throw new KeyNotFoundException("Задача больше не существует. Обновите список.");
+            item = ReadItem(reader); reader.Read();
+        }
+        var changed = updateEstimate && previousEstimate != item.EstimateMinutes;
+        if (changed) ResetQuestion(connection, transaction, id, item.EstimateMinutes);
+        transaction.Commit();
+        if (changed) CheckInChanged?.Invoke(id);
         return item;
     }
 

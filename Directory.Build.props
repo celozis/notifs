@@ -5,4 +5,14 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <Deterministic>true</Deterministic>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(NotifsPortable)' == 'true'">
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <SelfContained>true</SelfContained>
+    <RuntimeFrameworkVersion>10.0.15</RuntimeFrameworkVersion>
+    <NuGetLockFilePath>$(MSBuildProjectDirectory)/packages.portable.lock.json</NuGetLockFilePath>
+    <PublishSingleFile>false</PublishSingleFile>
+    <PublishTrimmed>false</PublishTrimmed>
+    <DebugType>none</DebugType>
+    <DebugSymbols>false</DebugSymbols>
+  </PropertyGroup>
 </Project>

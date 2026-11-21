@@ -115,9 +115,12 @@ public sealed partial class TaskService
 
     public IReadOnlyList<NotificationEvent> PollSignals()
     {
-        var now = time.GetUtcNow();
-        using var connection = Open();
-        using var transaction = connection.BeginTransaction();
+        using var connection = Open(); using var transaction = connection.BeginTransaction();
+        var result = PollSignals(connection, transaction, time.GetUtcNow());
+        transaction.Commit(); return result;
+    }
+    private IReadOnlyList<NotificationEvent> PollSignals(SqliteConnection connection, SqliteTransaction transaction, DateTimeOffset now)
+    {
         using var command = connection.CreateCommand();
         command.Transaction = transaction;
         command.CommandText = "SELECT data FROM signal_reminders ORDER BY rowid";
@@ -145,7 +148,6 @@ public sealed partial class TaskService
             events.Add(new(Guid.NewGuid(), NotificationKind.Signal, item.Revision.ToString(),
                 [new(new("signal", item.Id), item.Title, item.Description)], [new("snooze", "Отложить")]));
         }
-        transaction.Commit();
         return events;
     }
 

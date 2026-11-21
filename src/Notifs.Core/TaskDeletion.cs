@@ -4,7 +4,7 @@ namespace Notifs.Core;
 
 public sealed partial class TaskService
 {
-    private sealed record DeletedTask(TaskItem Item, TaskDraft? Draft, PersonalReminderState? Personal = null);
+    private sealed record DeletedTask(TaskItem Item, TaskDraft? Draft, PersonalReminderState? Personal = null, TaskSession? Session = null);
 
     public string? DeletedTitle
     {
@@ -34,12 +34,14 @@ public sealed partial class TaskService
         command.CommandText = "SELECT data FROM task_drafts WHERE draft_key=$id";
         var draft = command.ExecuteScalar() is string json ? JsonSerializer.Deserialize<TaskDraft>(json) : null;
         var personal = ReadPersonal(connection, transaction, id);
+        var session = ReadSessions(connection, transaction).SingleOrDefault(x => x.TaskId == id);
+        if (session != null) session = Accumulate(session, time.GetUtcNow(), true);
         command.CommandText = """
             INSERT INTO deleted_item(slot,kind,data) VALUES(1,'task',$data) ON CONFLICT(slot) DO UPDATE SET kind=excluded.kind,data=excluded.data;
             DELETE FROM task_drafts WHERE draft_key=$id;
             DELETE FROM tasks WHERE id=$id;
             """;
-        command.Parameters.AddWithValue("$data", JsonSerializer.Serialize(new DeletedTask(item, draft, personal)));
+        command.Parameters.AddWithValue("$data", JsonSerializer.Serialize(new DeletedTask(item, draft, personal, session)));
         command.ExecuteNonQuery();
         transaction.Commit();
         TaskNotificationsChanged?.Invoke(new("task", id), false);
@@ -75,6 +77,7 @@ public sealed partial class TaskService
         command.Parameters.Clear();
         command.ExecuteNonQuery();
         if (deleted.Personal is { } personal) WritePersonal(connection, transaction, item.Id, personal);
+        if (deleted.Session is { } session) WriteSession(connection, transaction, session with { RunningSince = null });
         transaction.Commit();
         return item;
     }

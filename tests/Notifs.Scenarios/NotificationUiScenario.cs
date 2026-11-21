@@ -9,6 +9,12 @@ namespace Notifs.Scenarios;
 
 internal static partial class UiScenario
 {
+    private sealed class IsolatedAutoStart : WindowsAutoStart
+    {
+        private string? registration;
+        public override string? ReadCommand() => registration;
+        public override void WriteCommand(string? command) => registration = command;
+    }
     private static async Task RunNotificationsAsync(string databasePath)
     {
         var service = new TaskService(databasePath);
@@ -19,7 +25,8 @@ internal static partial class UiScenario
         await UntilAsync(() => !model.IsBusy);
         main.SettingsCommand.Execute(null);
         await IdleAsync();
-        var settings = (SettingsView)((ContentControl)main.FindName("SettingsHost")).Content;
+        var settings = new SettingsView(new SettingsViewModel(service, new IsolatedAutoStart()));
+        ((ContentControl)main.FindName("SettingsHost")).Content = settings;
         var settingsModel = (SettingsViewModel)settings.DataContext;
         settingsModel.SnoozeMinutes = "0";
         settingsModel.SaveCommand.Execute(null);

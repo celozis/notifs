@@ -5,7 +5,7 @@ namespace Notifs.App;
 public sealed partial class MainViewModel
 {
     private bool calendar;
-    public TaskSection Section => calendar ? TaskSection.Calendar : history ? TaskSection.History : TaskSection.Tasks;
+    public TaskSection Section => calendar ? TaskSection.Calendar : history ? TaskSection.History : inProgress ? TaskSection.InProgress : TaskSection.Tasks;
     public TaskListSettings Settings { get; private set; } = new();
     public bool IsCalendar => calendar;
     public string SortLabel => new[] { "По срочности", "По рангу", "По полной оценке", "По дедлайну", "По созданию" }[(int)Settings.Sort] +
@@ -21,12 +21,14 @@ public sealed partial class MainViewModel
     }
     public CalendarState Calendar { get; private set; } = new(new(2026, 1, 1), new(2026, 1, 1));
     private IReadOnlyList<TaskItem> calendarSource = [];
+    private Dictionary<Guid, CalendarReason> calendarReasons = [];
+    private string CalendarReasonsFor(TaskItem item) => TaskService.CalendarReasonText(calendarReasons.GetValueOrDefault(item.Id));
     public event Action? CalendarChanged;
     public async Task OpenCalendarAsync()
     {
         try { Calendar = service.ReadCalendarState(); }
         catch (Exception ex) when (IsStorageError(ex)) { ShowStorageError(); return; }
-        calendar = true; history = false;
+        calendar = true; history = false; inProgress = false;
         await LoadAsync(reapplyFilter: true);
     }
     public async Task<bool> ChangeCalendarAsync(CalendarState state)
@@ -42,6 +44,11 @@ public sealed partial class MainViewModel
     private IEnumerable<TaskItem> PeriodTasks(IEnumerable<TaskItem> items)
     {
         calendarSource = items.ToArray();
-        return calendar ? calendarSource.Where(item => service.ReasonsFor(item, Calendar.Period) != CalendarReason.None) : calendarSource;
+        if (calendar && Settings.CalendarType == CalendarItemType.Recurring) return [];
+        if (inProgress) { var started = service.ReadSessions().Where(x => !x.Finished).Select(x => x.TaskId).ToHashSet(); return calendarSource.Where(x => x.CompletedAt == null && started.Contains(x.Id)); }
+        if (!calendar) return calendarSource;
+        var projected = service.ProjectCalendar(calendarSource, Calendar.Period);
+        calendarReasons = projected.ToDictionary(x => x.Task.Id, x => x.Reasons);
+        return projected.Select(x => x.Task);
     }
 }

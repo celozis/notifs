@@ -14,7 +14,7 @@ public abstract class Observable : INotifyPropertyChanged
     protected void Changed([CallerMemberName] string? name = null) => PropertyChanged?.Invoke(this, new(name));
 }
 
-public sealed class TaskRow(TaskItem item, TaskService service, string calendarReasons = "") : Observable
+public sealed partial class TaskRow(TaskItem item, TaskService service, string calendarReasons = "") : Observable
 {
     public TaskItem Item { get; private set; } = item;
     private TaskTiming timing = service.Timing(item);
@@ -27,14 +27,17 @@ public sealed class TaskRow(TaskItem item, TaskService service, string calendarR
     public string StateLabel => IsCompleted ? "Выполнена" : "В работе";
     public string ToggleLabel => IsCompleted ? "В работу" : "Готово";
     public string CheckLabel => IsCompleted ? "✓" : "";
-    public string CreatedLabel => timing.LocalCreatedAt.ToString("d MMMM yyyy, HH:mm");
-    public string DeadlineLabel => Item.Deadline is { } deadline ? deadline.Date.ToString("d MMMM yyyy") + (deadline.Time is { } exact ? ", " + exact.ToString("HH:mm") : " · до конца дня") : "Без дедлайна";
+    public string CreatedLabel => timing.LocalCreatedAt.ToString(timing.LocalCreatedAt.Year == timing.LocalNow.Year ? "d MMMM, HH:mm" : "d MMMM yyyy, HH:mm");
+    private string DeadlineDay(DateOnly date) => date == DateOnly.FromDateTime(timing.LocalNow.DateTime) ? "Сегодня" : date == DateOnly.FromDateTime(timing.LocalNow.DateTime).AddDays(1) ? "Завтра" : date.ToString(date.Year == timing.LocalNow.Year ? "d MMMM" : "d MMMM yyyy");
+    public string DeadlineLabel => Item.Deadline is { } deadline ? DeadlineDay(deadline.Date) + (deadline.Time is { } exact ? ", " + exact.ToString("HH:mm") : " · до конца дня") : "Без дедлайна";
     public string EstimateLabel => Item.EstimateMinutes is { } minutes ? Duration(TimeSpan.FromMinutes(minutes)) : "Без оценки";
     public string SlackLabel => timing.Slack is { } slack ? Duration(slack) : "Без дедлайна";
+    public string FourthFactLabel => Item.Deadline == null && Item.EstimateMinutes != null ? "Расчётное завершение" : "Запас времени";
+    public string FourthFactValue => service.EstimatedCompletion(Item) is { } end ? service.LocalTime(end).ToString("d MMMM, HH:mm") : SlackLabel;
     public bool IsOverdue => timing.IsOverdue;
     public bool HasNegativeSlack => IsIncomplete && !IsOverdue && timing.Slack < TimeSpan.Zero;
     public string UrgencyLabel => IsOverdue ? "Просрочена" : HasNegativeSlack ? "Оценка превышает время до дедлайна" : "";
-    public string MetadataLabel => (Item.Deadline is { } deadline ? deadline.Date.ToString("d MMMM") + (deadline.Time is { } exact ? ", " + exact.ToString("HH:mm") : " · весь день") : "Без дедлайна") + " · " + EstimateLabel;
+    public string MetadataLabel => (Item.Deadline is { } deadline ? DeadlineDay(deadline.Date) + (deadline.Time is { } exact ? ", " + exact.ToString("HH:mm") : " · весь день") : "Без дедлайна") + " · " + EstimateLabel;
     public string AgeLabel
     {
         get
@@ -48,7 +51,7 @@ public sealed class TaskRow(TaskItem item, TaskService service, string calendarR
         if (reasons != null) { CalendarReasons = reasons; Changed(nameof(CalendarReasons)); }
         Item = value;
         timing = service.Timing(value);
-        foreach (var name in new[] { nameof(Item), nameof(Title), nameof(Description), nameof(Rank), nameof(IsCompleted), nameof(IsIncomplete), nameof(StateLabel), nameof(ToggleLabel), nameof(CheckLabel), nameof(CreatedLabel), nameof(AgeLabel), nameof(DeadlineLabel), nameof(EstimateLabel), nameof(SlackLabel), nameof(IsOverdue), nameof(HasNegativeSlack), nameof(UrgencyLabel), nameof(MetadataLabel) }) Changed(name);
+        foreach (var name in new[] { nameof(Item), nameof(Title), nameof(Description), nameof(Rank), nameof(IsCompleted), nameof(IsIncomplete), nameof(StateLabel), nameof(ToggleLabel), nameof(CheckLabel), nameof(CreatedLabel), nameof(AgeLabel), nameof(DeadlineLabel), nameof(EstimateLabel), nameof(SlackLabel), nameof(FourthFactLabel), nameof(FourthFactValue), nameof(IsOverdue), nameof(HasNegativeSlack), nameof(UrgencyLabel), nameof(MetadataLabel) }) Changed(name);
     }
     public static string Duration(TimeSpan value)
     {
@@ -79,7 +82,7 @@ public sealed partial class MainViewModel : Observable
     private TaskFilter filter;
     private readonly Dictionary<Guid, int> heldPositions = [];
     public ObservableCollection<TaskRow> Tasks { get; } = [];
-    public TaskRow? Selected { get => selected; set { selected = value; Changed(); Changed(nameof(HasSelection)); CommandManager.InvalidateRequerySuggested(); } }
+    public TaskRow? Selected { get => selected; set { selected = value; Changed(); Changed(nameof(SelectedEntry)); Changed(nameof(HasSelection)); CommandManager.InvalidateRequerySuggested(); } }
     public bool HasSelection => Selected is not null;
     public bool IsHistory => history;
     public bool IsActive => !history;
@@ -90,12 +93,12 @@ public sealed partial class MainViewModel : Observable
     public string IncompleteLabel => $"Не сделаны {all.Count(x => x.CompletedAt is null)}";
     public string CompletedLabel => $"Сделаны {all.Count(x => x.CompletedAt is not null)}";
     public bool IsBusy { get => busy; private set { busy = value; Changed(); CommandManager.InvalidateRequerySuggested(); } }
-    public string PageTitle => calendar ? Calendar.IsMonth ? "Календарь целиком" : "Календарь" : history ? "История" : "Мои задачи";
-    public string Subtitle => calendar ? Calendar.IsMonth ? "Выберите день, чтобы увидеть связанные задачи." : "Неделя рядом с задачами. Полный месяц — в один клик." : history ? "Всё, что уже получилось сделать." : "Список слева. Внимание — на одном деле.";
-    public string CountLabel => $"ЗАДАЧИ · {Tasks.Count}";
+    public string PageTitle => calendar ? Calendar.IsMonth ? "Календарь целиком" : "Календарь" : history ? "История" : inProgress ? "В процессе" : "Мои задачи";
+    public string Subtitle => calendar ? Calendar.IsMonth ? "Выберите день, чтобы увидеть связанные задачи." : "Неделя рядом с задачами. Полный месяц — в один клик." : history ? "Всё, что уже получилось сделать." : inProgress ? "Начатые дела и сохранённые паузы." : "Список слева. Внимание — на одном деле.";
+    public string CountLabel => $"{(calendar ? "ЗАДАЧИ И ДЕЛА" : "ЗАДАЧИ")} · {VisibleRows.Count}";
     public string EmptyTitle => history ? "Здесь будут ваши результаты" : "Пока нет задач";
     public string EmptyMessage => history ? "Выполненные задачи появятся здесь. Любую можно вернуть в работу." : "Создайте задачу или выберите другой фильтр.";
-    public bool IsEmpty => Tasks.Count == 0;
+    public bool IsEmpty => VisibleRows.Count == 0;
     public string Status { get => status; private set { status = value; Changed(); } }
     public string Error { get => error; private set { error = value; Changed(); Changed(nameof(HasError)); CommandManager.InvalidateRequerySuggested(); } }
     public bool HasError => Error.Length > 0;
@@ -112,6 +115,8 @@ public sealed partial class MainViewModel : Observable
     public MainViewModel(TaskService service)
     {
         this.service = service;
+        Tasks.CollectionChanged += (_, _) => SyncVisibleRows();
+        InitializeSessions();
         RestoreDeletedCommand = new(async () =>
         {
             IsBusy = true;
@@ -146,32 +151,37 @@ public sealed partial class MainViewModel : Observable
         {
             var items = await Task.Run(() =>
             {
-                if (!initialized) { service.Initialize(); initialized = true; }
+                if (!initialized) { service.Initialize(); service.RecoverSessions(); initialized = true; }
                 HasDeleted = service.DeletedKind is not null;
                 Settings = service.ReadTaskListSettings(Section);
                 filter = (TaskFilter)Settings.Status;
                 return service.ListAll();
             });
             var id = selectId ?? Selected?.Item.Id;
-            all = service.ApplyTaskList(PeriodTasks(items), Settings with { Status = TaskStatusFilter.All }).ToList();
+            var source = PeriodTasks(items);
+            if (inProgress && !reapplyFilter) source = source.Concat(items.Where(x => x.CompletedAt != null && heldPositions.ContainsKey(x.Id)));
+            all = service.ApplyTaskList(source, Settings with { Status = TaskStatusFilter.All }).ToList();
             if (reapplyFilter || Tasks.Count == 0)
             {
                 heldPositions.Clear();
                 Tasks.Clear();
-                foreach (var item in all.Where(MatchesFilter)) Tasks.Add(new(item, service, calendar ? MainWindow.ReasonLabel(service.ReasonsFor(item, Calendar.Period)) : ""));
+                foreach (var item in all.Where(MatchesFilter)) Tasks.Add(new(item, service, calendar ? CalendarReasonsFor(item) : ""));
             }
             else
             {
                 foreach (var row in Tasks.ToArray())
                 {
                     var updated = all.FirstOrDefault(x => x.Id == row.Item.Id);
-                    if (updated is null) Tasks.Remove(row); else row.Update(updated, calendar ? MainWindow.ReasonLabel(service.ReasonsFor(updated, Calendar.Period)) : "");
+                    if (updated is null) Tasks.Remove(row); else row.Update(updated, calendar ? CalendarReasonsFor(updated) : "");
                 }
-                // Newly saved tasks are visible immediately, without moving existing cards.
-                foreach (var item in all.Where(x => x.Id == selectId && Tasks.All(row => row.Item.Id != x.Id))) Tasks.Add(new(item, service));
+                // Reconcile new calendar/session membership without moving existing cards.
+                foreach (var item in all.Where(x => (MatchesFilter(x) || x.Id == selectId) && Tasks.All(row => row.Item.Id != x.Id)))
+                    Tasks.Add(new(item, service, calendar ? CalendarReasonsFor(item) : ""));
                 RefreshTime();
             }
             Selected = Tasks.FirstOrDefault(row => row.Item.Id == id) ?? Tasks.FirstOrDefault();
+            RefreshCalendarReminders();
+            RefreshTime();
             Status = "Все изменения сохранены на этом компьютере";
             RefreshLabels();
             Changed(nameof(SortLabel)); Changed(nameof(IsCalendar)); CalendarChanged?.Invoke();
@@ -188,7 +198,7 @@ public sealed partial class MainViewModel : Observable
         _ => true
     };
     private async Task SetFilterAsync(TaskFilter value) { await ApplySettingsAsync(Settings with { Status = (TaskStatusFilter)value }); }
-    private async Task SwitchAsync(bool showHistory) { history = showHistory; calendar = false; await LoadAsync(reapplyFilter: true); }
+    private async Task SwitchAsync(bool showHistory) { history = showHistory; calendar = false; inProgress = false; await LoadAsync(reapplyFilter: true); }
 
     private async Task ChangeStateAsync(TaskRow row, bool restore)
     {
@@ -200,6 +210,7 @@ public sealed partial class MainViewModel : Observable
             var updated = await Task.Run(() => restore ? service.Restore(row.Item.Id) : service.Complete(row.Item.Id));
             // Update only after SQLite confirms the write; keep the row and its position.
             row.Update(updated);
+            row.RefreshSession(service.ReadSession(updated.Id));
             if (Tasks.Contains(row)) heldPositions.TryAdd(row.Item.Id, Tasks.IndexOf(row));
             var index = all.FindIndex(x => x.Id == updated.Id);
             if (index >= 0) all[index] = updated;
@@ -223,7 +234,7 @@ public sealed partial class MainViewModel : Observable
     }
     public async Task SelectTaskAsync(Guid id)
     {
-        history = false; calendar = false;
+        history = false; calendar = false; inProgress = false;
         await LoadAsync(id, true);
         // Opening a concrete notification must remain possible even when the saved list excludes it.
         if (!HasError && Tasks.All(row => row.Item.Id != id))
@@ -237,6 +248,7 @@ public sealed partial class MainViewModel : Observable
     {
         history = false;
         calendar = false;
+        inProgress = false;
         await LoadAsync(reapplyFilter: true);
     }
     private const string NotificationError = "Не удалось обработать напоминания. Проверьте доступ к папке данных; повторим автоматически.";
@@ -259,8 +271,13 @@ public sealed partial class MainViewModel : Observable
     }
     public void RefreshTime()
     {
+        Changed(nameof(DateLabel)); Changed(nameof(ClockLabel));
         if (IsBusy && all.Count == 0) return;
-        foreach (var row in Tasks) row.Update(row.Item);
+        Dictionary<Guid, TaskSession> sessions;
+        try { sessions = service.ReadSessions().ToDictionary(x => x.TaskId); }
+        catch (Exception ex) when (IsStorageError(ex)) { ShowStorageError(); return; }
+        InProgressCount = sessions.Values.Count(x => !x.Finished); Changed(nameof(InProgressCount));
+        foreach (var row in Tasks) { row.Update(row.Item); row.RefreshSession(sessions.GetValueOrDefault(row.Item.Id)); }
         var available = service.OrderTaskList(Tasks.Where(x => !heldPositions.ContainsKey(x.Item.Id)).Select(x => x.Item), Settings)
             .Select(item => Tasks.Single(row => row.Item.Id == item.Id)).ToList();
         foreach (var row in Tasks.Where(x => heldPositions.ContainsKey(x.Item.Id)).OrderBy(x => heldPositions[x.Item.Id]))

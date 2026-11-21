@@ -76,10 +76,10 @@ internal static partial class UiScenario
         await SizeAsync(main, 1010, 930);
         Descendants<Button>(output.Window).Single(x => Equals(x.Content, "×")).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
         Assert(service.ListSignals().Single().Current is not null && output.VisibleEvents.Count == 0, "native close hides card without completing recurring work");
-        clock.Advance(TimeSpan.FromHours(1)); await runtime.RunOnceAsync();
+        await AdvanceLiveAsync(clock.Advance, runtime, TimeSpan.FromHours(1));
         Descendants<Button>(output.Window).Single(x => Equals(x.Content, "Отложить на 30 мин")).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
         await UntilAsync(() => service.ListSignals().Single().SnoozedUntil is not null && output.VisibleEvents.Count == 0);
-        clock.Advance(TimeSpan.FromMinutes(30)); await runtime.RunOnceAsync();
+        await AdvanceLiveAsync(clock.Advance, runtime, TimeSpan.FromMinutes(30));
         var oldEvent = output.VisibleEvents.Single();
         Descendants<Button>(output.Window).Single(x => Equals(x.Content, "Готово")).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
         await UntilAsync(() => service.ListSignals().Single().History.Count == 1 && output.VisibleEvents.Count == 0);

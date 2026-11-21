@@ -16,7 +16,7 @@
   </UserControl.Resources>
   <Grid Background="{DynamicResource Background}">
     <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
-    <StackPanel Margin="0,0,0,24"><TextBlock Text="{Binding Heading}" FontSize="29" FontWeight="SemiBold"/><TextBlock Text="{Binding Subtitle}" Style="{StaticResource MutedText}" Margin="0,8,0,0"/></StackPanel>
+    <StackPanel Margin="0,0,0,24"><TextBlock Text="{Binding Heading}" FontSize="{DynamicResource PageHeadingSize}" FontWeight="SemiBold"/><TextBlock Text="{Binding Subtitle}" Style="{StaticResource MutedText}" Margin="0,8,0,0"/></StackPanel>
     <StackPanel Grid.Row="1" Visibility="{Binding HasMessage, Converter={StaticResource BoolVisibility}}" Margin="0,0,0,12"><TextBlock Text="{Binding Message}" FontSize="14" AutomationProperties.LiveSetting="Assertive"><TextBlock.Style><Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}"><Setter Property="Foreground" Value="{DynamicResource Primary}"/><Style.Triggers><DataTrigger Binding="{Binding HasError}" Value="True"><Setter Property="Foreground" Value="{DynamicResource Danger}"/></DataTrigger></Style.Triggers></Style></TextBlock.Style></TextBlock><Button Content="Повторить" Command="{Binding RefreshCommand}" Visibility="{Binding CanRetry, Converter={StaticResource BoolVisibility}}" HorizontalAlignment="Left" Margin="0,6,0,0"/></StackPanel>
     <Grid Grid.Row="2" Visibility="{Binding IsList, Converter={StaticResource BoolVisibility}}">
       <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>

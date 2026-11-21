@@ -12,9 +12,10 @@ namespace Notifs.App;
 /// <summary>Native primary-monitor presentation. Domain actions are supplied by the application.</summary>
 public sealed class NativeNotificationOutput : INotificationOutput, IDisposable
 {
-    private readonly StackPanel panel = new();
+    private readonly StackPanel panel = new() { Background = Brushes.Transparent };
     private readonly MediaPlayer player = new();
     private bool disposed;
+    private NotificationMonitor? monitor = WindowsNotificationMonitors.List().FirstOrDefault(x => x.IsPrimary);
     public Window Window { get; }
     public IReadOnlyList<NotificationEvent> VisibleEvents { get; private set; } = [];
     public Action<Guid>? HideRequested { get; set; }
@@ -22,6 +23,15 @@ public sealed class NativeNotificationOutput : INotificationOutput, IDisposable
     public Func<NotificationEvent, NotificationSubject, string, Task>? ActionRequested { get; set; }
     public Func<int> SnoozeMinutes { get; set; } = () => 30;
     public Action<bool>? HoverChanged { get; set; }
+    public void SetMonitor(NotificationMonitor? value)
+    {
+        if (monitor == value) return;
+        monitor = value;
+        if (value == null) { Window.Hide(); return; }
+        var hwnd = new WindowInteropHelper(Window).EnsureHandle();
+        SetWindowPos(hwnd, -1, value.WorkArea.Left + 1, value.WorkArea.Top + 1, 0, 0, 0x0011);
+        if (VisibleEvents.Count > 0) Render(VisibleEvents);
+    }
 
     public NativeNotificationOutput()
     {
@@ -62,9 +72,10 @@ public sealed class NativeNotificationOutput : INotificationOutput, IDisposable
         VisibleEvents = events.ToArray();
         panel.Children.Clear();
         if (events.Count == 0) { Window.Hide(); return; }
+        if (monitor == null) return;
         // Creating the HWND at the primary origin gives WPF the correct DPI before measuring.
         new WindowInteropHelper(Window).EnsureHandle();
-        var work = PrimaryWorkArea();
+        var work = monitor.WorkArea;
         var dpi = VisualTreeHelper.GetDpi(Window).DpiScaleX;
         Window.Width = Math.Max(1, Math.Min(365, (work.Right - work.Left) / dpi - 44));
         var height = Math.Max(1, (work.Bottom - work.Top) / dpi - 44);
@@ -106,9 +117,9 @@ public sealed class NativeNotificationOutput : INotificationOutput, IDisposable
         content.Children.Add(header);
         var error = new TextBlock { Foreground = Resource("Danger"), FontSize = 12, Visibility = Visibility.Collapsed };
         AutomationProperties.SetLiveSetting(error, AutomationLiveSetting.Assertive);
-        if (item.Kind == NotificationKind.Summary)
+        if (item.Kind is NotificationKind.Summary or NotificationKind.Missed)
         {
-            content.Children.Add(new TextBlock { Text = "Вернёмся к делам?", FontSize = 16, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 0, 0, 14) });
+            content.Children.Add(new TextBlock { Text = item.Kind == NotificationKind.Missed ? "Пропущенные напоминания" : "Вернёмся к делам?", FontSize = 16, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 0, 0, 14) });
             foreach (var subject in item.Subjects)
             {
                 var row = new Grid { Margin = new Thickness(0, 0, 0, 12) };
@@ -122,6 +133,8 @@ public sealed class NativeNotificationOutput : INotificationOutput, IDisposable
             }
         }
         else
+        {
+        if (item.Kind == NotificationKind.CheckIn) content.Children.Add(new TextBlock { Text = "Сделал задачу?", FontSize = 16, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 0, 0, 10) });
         foreach (var subject in item.Subjects)
         {
             var open = new Button { Content = new TextBlock { Text = subject.Title, FontSize = 15, FontWeight = FontWeights.SemiBold, TextWrapping = TextWrapping.Wrap },
@@ -141,13 +154,14 @@ public sealed class NativeNotificationOutput : INotificationOutput, IDisposable
             }
             content.Children.Add(actions);
         }
+        }
         content.Children.Add(error);
         var layout = new Grid();
         if (item.Kind == NotificationKind.Personal) layout.Children.Add(new Border { Width = 3, HorizontalAlignment = HorizontalAlignment.Left, Background = Resource("Primary"), CornerRadius = new CornerRadius(12, 0, 0, 12) });
         layout.RowDefinitions.Add(new RowDefinition());
         layout.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         layout.Children.Add(new ScrollViewer { Content = content, Margin = new Thickness(18, 15, 17, 16), VerticalScrollBarVisibility = ScrollBarVisibility.Auto, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled });
-        if (item.Kind == NotificationKind.Summary)
+        if (item.Kind is NotificationKind.Summary or NotificationKind.Missed)
         {
             var openTasks = new Button { Content = "Открыть задачи", Style = (Style)Window.FindResource("PrimaryButton"), HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(18, 0, 17, 16) };
             openTasks.Click += async (_, _) => await InvokeAsync(item, item.Subjects[0], "open-tasks", openTasks, error);
@@ -170,7 +184,7 @@ public sealed class NativeNotificationOutput : INotificationOutput, IDisposable
     }
 
     private static string KindLabel(NotificationKind kind) => kind switch
-    { NotificationKind.Personal => "НАПОМИНАНИЕ", NotificationKind.Signal => "ПРОСТОЙ СИГНАЛ", NotificationKind.Recurring => "ПОВТОРЯЮЩЕЕСЯ ДЕЛО", NotificationKind.CheckIn => "СДЕЛАЛ ЗАДАЧУ?", _ => "СВОДКА ЗАДАЧ" };
+    { NotificationKind.Personal => "НАПОМИНАНИЕ", NotificationKind.Signal => "ПРОСТОЙ СИГНАЛ", NotificationKind.Recurring => "ПОВТОРЯЮЩЕЕСЯ ДЕЛО", NotificationKind.CheckIn => "ВРЕМЯ ПРОВЕРИТЬ", NotificationKind.Missed => "ПРОПУСКИ", _ => "СВОДКА ЗАДАЧ" };
     private Brush Resource(string name) => (Brush)Window.FindResource(name);
     private static void Hover(SolidColorBrush brush, Color color)
     {
@@ -179,8 +193,8 @@ public sealed class NativeNotificationOutput : INotificationOutput, IDisposable
     }
     private void Position()
     {
-        if (disposed || !Window.IsVisible) return;
-        var work = PrimaryWorkArea();
+        if (disposed || !Window.IsVisible || monitor == null) return;
+        var work = monitor.WorkArea;
         var dpi = VisualTreeHelper.GetDpi(Window);
         var width = (int)Math.Ceiling(Window.ActualWidth * dpi.DpiScaleX);
         var height = (int)Math.Ceiling(Window.ActualHeight * dpi.DpiScaleY);
@@ -203,17 +217,6 @@ public sealed class NativeNotificationOutput : INotificationOutput, IDisposable
         VisibleEvents = [];
     }
 
-    private static Rect32 PrimaryWorkArea()
-    {
-        var info = new MonitorInfo { Size = Marshal.SizeOf<MonitorInfo>() };
-        if (!GetMonitorInfo(MonitorFromPoint(new Point32(), 1), ref info)) throw new System.ComponentModel.Win32Exception();
-        return info.Work;
-    }
-    [StructLayout(LayoutKind.Sequential)] private struct Point32 { public int X, Y; }
-    [StructLayout(LayoutKind.Sequential)] private struct Rect32 { public int Left, Top, Right, Bottom; }
-    [StructLayout(LayoutKind.Sequential)] private struct MonitorInfo { public int Size; public Rect32 Monitor, Work; public uint Flags; }
-    [DllImport("user32.dll")] private static extern nint MonitorFromPoint(Point32 point, uint flags);
-    [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)] private static extern bool GetMonitorInfo(nint monitor, ref MonitorInfo info);
     [DllImport("user32.dll", EntryPoint = "GetWindowLongPtrW")] private static extern nint GetWindowLongPtr(nint hwnd, int index);
     [DllImport("user32.dll", EntryPoint = "SetWindowLongPtrW")] private static extern nint SetWindowLongPtr(nint hwnd, int index, nint value);
     [DllImport("user32.dll")] private static extern bool SetWindowPos(nint hwnd, nint after, int x, int y, int width, int height, uint flags);

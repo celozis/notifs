@@ -6,6 +6,7 @@ public enum TaskSection { Tasks, InProgress, History, Calendar }
 public enum TaskStatusFilter { All, Incomplete, Completed }
 public enum TaskSort { Urgency, Rank, Estimate, Deadline, Created }
 public enum OptionalFieldFilter { Any, Missing }
+public enum CalendarItemType { All, Tasks, Recurring }
 
 public sealed record TaskListSettings(
     TaskStatusFilter Status = TaskStatusFilter.All, TaskSort Sort = TaskSort.Urgency, bool Descending = false,
@@ -14,6 +15,7 @@ public sealed record TaskListSettings(
     DateOnly? CreatedFrom = null, DateOnly? CreatedTo = null)
 {
     public ImportanceRank[] Ranks { get; init; } = [];
+    public CalendarItemType CalendarType { get; init; }
     public static TaskListSettings Default(TaskSection section) => new(Status: section == TaskSection.History ? TaskStatusFilter.Completed : TaskStatusFilter.All);
     public bool HasFieldFilters => Ranks.Length > 0 || EstimateMode != OptionalFieldFilter.Any || EstimateFrom != null || EstimateTo != null ||
         DeadlineMode != OptionalFieldFilter.Any || DeadlineFrom != null || DeadlineTo != null || CreatedFrom != null || CreatedTo != null;
@@ -25,6 +27,7 @@ public sealed record TaskListSettings(
         if (EstimateFrom is <= 0 || EstimateTo is <= 0 || EstimateFrom > EstimateTo)
             throw new ArgumentException("Оценка должна быть положительной; начало не больше конца.");
         if (DeadlineFrom > DeadlineTo || CreatedFrom > CreatedTo) throw new ArgumentException("Начало диапазона дат не должно быть позже конца.");
+        if (!Enum.IsDefined(CalendarType)) throw new ArgumentException("Выберите тип календарных элементов.");
     }
 }
 

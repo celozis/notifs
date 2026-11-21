@@ -10,11 +10,14 @@ public partial class SettingsView : UserControl
         InitializeComponent(); DataContext = model;
         Loaded += (_, _) => { Adapt(); SnoozeInput.Focus(); };
         SizeChanged += (_, _) => Adapt();
+        Microsoft.Win32.SystemEvents.DisplaySettingsChanged += DisplayChanged;
+        Unloaded += (_, _) => Microsoft.Win32.SystemEvents.DisplaySettingsChanged -= DisplayChanged;
         model.InvalidField += name => Dispatcher.InvokeAsync(() =>
         {
             if (FindName(name) is FrameworkElement input) { input.BringIntoView(); input.Focus(); }
         });
     }
+    private void DisplayChanged(object? sender, EventArgs args) => Dispatcher.BeginInvoke(() => ((SettingsViewModel)DataContext).RefreshMonitors());
     private void Adapt()
     {
         var stacked = ActualWidth < 680;

@@ -10,6 +10,8 @@ namespace Notifs.App;
 
 public partial class MainWindow : Window
 {
+    public static readonly DependencyProperty IsCompactTaskLayoutProperty = DependencyProperty.Register(nameof(IsCompactTaskLayout), typeof(bool), typeof(MainWindow));
+    public bool IsCompactTaskLayout { get => (bool)GetValue(IsCompactTaskLayoutProperty); private set => SetValue(IsCompactTaskLayoutProperty, value); }
     public RelayCommand NewCommand { get; }
     public RelayCommand EditCommand { get; }
     public RelayCommand BackToListCommand { get; }
@@ -26,6 +28,7 @@ public partial class MainWindow : Window
     private bool showingDetails;
     private readonly List<(Button Button, TextBlock Label)> navigation = [];
     private Button? activeNavigation;
+    private Button? progressNavigation;
     private Button? historyNavigation;
     private Button? settingsNavigation;
     private readonly DispatcherTimer timeRefresh = new() { Interval = TimeSpan.FromSeconds(1) };
@@ -54,9 +57,10 @@ public partial class MainWindow : Window
         InitializeTaskPanels();
         InitializeCalendar();
         DataContext = model;
+        model.CalendarReminderOpened += async id => { if (CanNavigate()) await OpenCalendarReminderAsync(id); };
         AddNavigation("Новая задача", "M9,1 V17 M1,9 H17", NewCommand, primary: true);
         activeNavigation = AddNavigation("Мои задачи", "M1,3 L3,5 L6,1 M9,3 H17 M1,12 L3,14 L6,10 M9,12 H17", new AsyncCommand(() => NavigateAsync(false), CanNavigate));
-        AddNavigation("В процессе", "M4,1 L16,9 L4,17 Z", null);
+        progressNavigation = AddNavigation("В процессе", "M4,1 L16,9 L4,17 Z", new AsyncCommand(async () => { if (editor?.PersistDraft() == false) return; CloseEditor(); showingDetails = false; await model.OpenInProgressAsync(); AdaptLayout(); }, CanNavigate));
         calendarNavigation = AddNavigation("Календарь", "M2,3 H16 V17 H2 Z M5,0 V6 M13,0 V6 M2,8 H16 M6,11 H7 M11,11 H12", CalendarCommand);
         remindersNavigation = AddNavigation("Напоминания", "M3,13 H15 L13,10 V6 A4,4 0 0 0 5,6 V10 Z M7,16 Q9,19 11,16", RemindersCommand);
         historyNavigation = AddNavigation("История", "M2,2 V7 H7 M2,7 A7,7 0 1 1 2,13 M9,4 V10 L13,12", new AsyncCommand(() => NavigateAsync(true), CanNavigate));
@@ -74,8 +78,15 @@ public partial class MainWindow : Window
         Loaded += (_, _) => timeRefresh.Start();
         Closed += (_, _) => timeRefresh.Stop();
         Shell.SizeChanged += (_, _) => AdaptLayout();
+        ContentGrid.SizeChanged += (_, _) => AdaptLayout();
+        DetailActions.SizeChanged += (_, _) => AdaptLayout();
         model.PropertyChanged += (_, args) =>
         {
+            if (args.PropertyName == nameof(model.InProgressCount) && progressNavigation != null)
+            {
+                progressNavigation.ToolTip = $"В процессе · {model.InProgressCount}"; AutomationProperties.SetName(progressNavigation, $"В процессе · {model.InProgressCount}");
+                navigation.First(x => x.Button == progressNavigation).Label.Text = $"В процессе  {model.InProgressCount}";
+            }
             if (args.PropertyName is nameof(model.Selected) or nameof(model.IsHistory)) AdaptLayout();
         };
         TaskList.PreviewMouseLeftButtonUp += (_, args) =>
@@ -93,6 +104,12 @@ public partial class MainWindow : Window
     }
 
     private bool CanNavigate() => TaskPanelOverlay?.IsVisible != true && !model.IsBusy && editor?.IsBusy != true && reminders?.IsBusy != true && reminders?.HasModeConfirmation != true && DeleteOverlay?.IsVisible != true && (SettingsHost?.Content as SettingsView)?.DataContext is not SettingsViewModel { IsBusy: true };
+    internal bool PrepareExit()
+    {
+        if (model.IsBusy || editor?.IsBusy == true || reminders?.IsBusy == true || (SettingsHost.Content as SettingsView)?.DataContext is SettingsViewModel { IsBusy: true } || editor?.PersistDraft() == false) return false;
+        try { model.Service.CheckpointSessions(pause: true); return true; }
+        catch (Exception ex) when (MainViewModel.IsStorageError(ex)) { model.ReportNotificationError(); return false; }
+    }
     public async Task OpenRemindersAsync()
     {
         if (editor?.PersistDraft() == false) return;
@@ -116,6 +133,12 @@ public partial class MainWindow : Window
         await OpenRemindersAsync();
         if (WindowState == WindowState.Minimized) WindowState = WindowState.Normal;
         Show(); Activate();
+    }
+    private async Task OpenCalendarReminderAsync(Guid id)
+    {
+        CloseTaskPanel(); await OpenRemindersAsync();
+        var row = reminders?.Signals.SingleOrDefault(x => x.Item.Id == id);
+        if (row != null) reminders!.EditCommand.Execute(row);
     }
     public async Task OpenTaskAsync(Guid id)
     {
@@ -241,6 +264,11 @@ public partial class MainWindow : Window
         BrowseView.Height = scrollWorkspace ? minimumHeight : double.NaN;
         BrowseScroll.VerticalScrollBarVisibility = scrollWorkspace ? ScrollBarVisibility.Auto : ScrollBarVisibility.Disabled;
         var iconsOnly = width < 550;
+        IsCompactTaskLayout = iconsOnly;
+        Workspace.Margin = iconsOnly ? new Thickness(12, 24, 12, 16) : new Thickness(25, 30, 25, 16);
+        ClockBadge.Visibility = width < 850 ? Visibility.Collapsed : Visibility.Visible;
+        var headingSize = iconsOnly ? 26.0 : 29.0;
+        if (!Resources.Contains("PageHeadingSize") || !Equals(Resources["PageHeadingSize"], headingSize)) Resources["PageHeadingSize"] = headingSize;
         NavColumn.Width = new GridLength(iconsOnly ? 58 : 178);
         Navigation.Padding = iconsOnly ? new Thickness(7, 30, 6, 16) : new Thickness(12, 30, 12, 16);
         Brand.Margin = iconsOnly ? new Thickness(0, 0, 0, 28) : new Thickness(8, 0, 0, 28);
@@ -253,17 +281,23 @@ public partial class MainWindow : Window
             button.MinWidth = 44;
         }
         var stacked = width < 850;
+        Grid.SetRow(OpenFilters, width < 550 ? 1 : 0); Grid.SetColumn(OpenFilters, width < 550 ? 0 : 1);
+        OpenFilters.HorizontalAlignment = width < 550 ? HorizontalAlignment.Stretch : HorizontalAlignment.Right;
         ListColumn.Width = new GridLength(1, GridUnitType.Star);
         GapColumn.Width = new GridLength(stacked ? 0 : 20);
         DetailColumn.Width = stacked ? new GridLength(0) : new GridLength(1, GridUnitType.Star);
         Grid.SetColumn(DetailPane, stacked ? 0 : 2);
         BackToList.Visibility = stacked ? Visibility.Visible : Visibility.Collapsed;
+        var detailHeight = ContentGrid.ActualHeight > 0 ? ContentGrid.ActualHeight : Math.Max(220, Height - 300);
+        DetailPane.MaxHeight = detailHeight;
+        DetailScroll.MaxHeight = Math.Max(80, detailHeight - 64 - DetailActions.ActualHeight - (stacked ? 60 : 0));
         ListPane.Visibility = stacked && showingDetails && model.HasSelection ? Visibility.Collapsed : Visibility.Visible;
         DetailPane.Visibility = stacked && (!showingDetails || !model.HasSelection) ? Visibility.Collapsed : Visibility.Visible;
         FilterBar.Visibility = Visibility.Visible;
         var settingsOpen = SettingsHost.IsVisible;
         var remindersOpen = RemindersHost.IsVisible;
-        if (activeNavigation is not null) activeNavigation.Background = (Brush)FindResource(model.IsHistory || model.IsCalendar || settingsOpen || remindersOpen ? "Navigation" : "Selected");
+        if (activeNavigation is not null) activeNavigation.Background = (Brush)FindResource(model.IsHistory || model.IsInProgress || model.IsCalendar || settingsOpen || remindersOpen ? "Navigation" : "Selected");
+        if (progressNavigation is not null) progressNavigation.Background = (Brush)FindResource(model.IsInProgress && !settingsOpen && !remindersOpen ? "Selected" : "Navigation");
         if (historyNavigation is not null) historyNavigation.Background = (Brush)FindResource(model.IsHistory && !settingsOpen && !remindersOpen ? "Selected" : "Navigation");
         if (calendarNavigation is not null) calendarNavigation.Background = (Brush)FindResource(model.IsCalendar && !settingsOpen && !remindersOpen ? "Selected" : "Navigation");
         if (settingsNavigation is not null) settingsNavigation.Background = (Brush)FindResource(settingsOpen ? "Selected" : "Navigation");

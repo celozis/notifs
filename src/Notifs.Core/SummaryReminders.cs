@@ -46,7 +46,7 @@ public sealed partial class TaskService
     }
 
     /// <summary>Saves the two owned settings sections atomically, leaving other sections untouched.</summary>
-    public void SaveSettings(NotificationSettings notifications, SummarySettings summary)
+    public void SaveSettings(NotificationSettings notifications, SummarySettings summary, MonitorSettings? monitors = null)
     {
         ValidateNotificationSettings(notifications);
         if (summary.IntervalMinutes < 1) throw new ArgumentException("Интервал сводки: положительное целое число минут.");
@@ -65,6 +65,7 @@ public sealed partial class TaskService
         }
         WriteNotificationSettings(connection, transaction, notifications);
         WriteSummary(connection, transaction, new(summary, first, next));
+        if (monitors != null) WriteMonitorSettings(connection, transaction, monitors);
         transaction.Commit();
     }
 
@@ -80,15 +81,17 @@ public sealed partial class TaskService
 
     public IReadOnlyList<NotificationEvent> PollSummary()
     {
-        var now = time.GetUtcNow();
-        using var connection = Open();
-        using var transaction = connection.BeginTransaction();
+        using var connection = Open(); using var transaction = connection.BeginTransaction();
+        var result = PollSummary(connection, transaction, time.GetUtcNow());
+        transaction.Commit(); return result;
+    }
+    private IReadOnlyList<NotificationEvent> PollSummary(SqliteConnection connection, SqliteTransaction transaction, DateTimeOffset now)
+    {
         var state = ReadSummary(connection, transaction)!;
         if (!state.Settings.Enabled || state.NextAt is not { } due || due > now) return [];
         WriteSummary(connection, transaction, state with { NextAt = SummaryOccurrence(state.FirstAt, state.Settings.IntervalMinutes, now) });
         // Only the current minute is deliverable. Older ticks are consumed, never replayed after downtime (#20).
         var subjects = now - due < TimeSpan.FromMinutes(1) ? ReadSummaryTasks(connection, transaction).Take(state.Settings.TaskCount).Select(SummarySubject).ToArray() : [];
-        transaction.Commit();
         return subjects.Length == 0 ? [] : [new(Guid.NewGuid(), NotificationKind.Summary, "summary", subjects)];
     }
 

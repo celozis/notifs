@@ -108,8 +108,8 @@ internal static class RecurringScenarios
         Check(future.Length == 3 && future[0].DueAt == new DateTimeOffset(2027, 2, 9, 11, 25, 0, TimeSpan.Zero), "fixed hourly calendar exposes planned dates despite one outstanding debt");
         service.SetSignalEnabled(item.Id, false); service.SetSignalEnabled(fixedItem.Id, false);
         var disabledPlanned = service.ListReminderCalendar(clock.GetUtcNow(), clock.GetUtcNow().AddHours(3)).Where(x => x.Kind == ReminderCalendarKind.Planned).ToArray();
-        Check(disabledPlanned.Count(x => x.ScheduleId == fixedItem.Id) == 3 && disabledPlanned.Count(x => x.ScheduleId == item.Id) == 1,
-            "disabling stops notifications while calendar retains known fixed and interval planned dates");
+        Check(disabledPlanned.All(x => x.ScheduleId != fixedItem.Id && x.ScheduleId != item.Id),
+            "disabled rules retain debt and history without active future calendar plans (#19)");
         service.SetSignalEnabled(fixedItem.Id, true);
         var signal = service.SaveSignal(fixedItem.Id, fixedItem.Title, "", hourly, true, confirmClearDebt: true);
         Check(signal.NextAt == new DateTimeOffset(2027, 2, 9, 11, 25, 0, TimeSpan.Zero), "conversion of an unchanged fixed rule to a signal skips old recurring debt rather than replaying it");

@@ -24,6 +24,24 @@ internal static class Program
         var directory = Path.Combine(Path.GetTempPath(), "Notifs.Scenarios", Guid.NewGuid().ToString("N"));
         try
         {
+            if (args.Contains("--portable")) { PortableScenarios.Run(args[Array.IndexOf(args, "--portable") + 1]); return 0; }
+            SessionScenarios.Run(directory);
+            if (args.Contains("--sessions")) return 0;
+            CheckInScenarios.Run(directory);
+            if (args.Contains("--check-in")) return 0;
+            CalendarRangeScenarios.Run(directory);
+            if (args.Contains("--range")) return 0;
+            ReminderCalendarScenarios.Run(directory);
+            if (args.Contains("--reminder-calendar")) return 0;
+            MonitorScenarios.Run(directory);
+            if (args.Contains("--monitors")) return 0;
+            RecoveryScenarios.Run(directory);
+            if (args.Contains("--recovery")) return 0;
+            if (args.Contains("--features-ui") || args.Contains("--release-ui"))
+            {
+                var featuresApp = new Application(); featuresApp.Resources.MergedDictionaries.Add(new ResourceDictionary { Source = new Uri("/Notifs.App;component/Theme.xaml", UriKind.Relative) });
+                return UiScenario.Run(featuresApp, Path.Combine(directory, "features.db"), featuresOnly: args.Contains("--features-ui"), releaseOnly: args.Contains("--release-ui"));
+            }
             if (args.Contains("--background")) { BackgroundProcessScenarios.Run(directory); return 0; }
             if (args.Contains("--autostart")) { AutoStartScenarios.Run(); return 0; }
             if (args.Contains("--background-ui"))

@@ -14,6 +14,7 @@ public sealed class TaskFiltersView : UserControl
     private readonly ComboBox sort = Choice("Порядок", "По срочности", "По рангу", "По полной оценке", "По дедлайну", "По созданию");
     private readonly ComboBox direction = Choice("Направление", "По возрастанию", "По убыванию");
     private readonly ComboBox status = Choice("Состояние", "Все", "Не сделаны", "Сделаны");
+    private readonly ComboBox calendarType = Choice("Тип элементов календаря", "Все", "Обычные задачи", "Повторяющиеся дела");
     private readonly ComboBox estimateMode = Choice("Полная оценка", "Любая / диапазон", "Без оценки");
     private readonly ComboBox deadlineMode = Choice("Дедлайн", "Любой / диапазон", "Без дедлайна");
     private readonly ComboBox unit = Choice("Единицы оценки", "Минуты", "Часы");
@@ -37,6 +38,11 @@ public sealed class TaskFiltersView : UserControl
         void Pair(string a, FrameworkElement x, string b, FrameworkElement y) { var pair = new UniformPair(Field(a, x), Field(b, y)); pairs.Add(pair); body.Children.Add(pair); }
         Pair("Порядок", sort, "Направление", direction);
         body.Children.Add(Field("Состояние", status));
+        if (section == TaskSection.Calendar)
+        {
+            body.Children.Add(Field("Тип элементов", calendarType));
+            body.Children.Add(new TextBlock { Text = "Отбор по рангу, оценке, дедлайну или созданию исключает повторяющиеся дела: у них нет этих полей.", FontSize = 12, Margin = new(0, 0, 0, 16) });
+        }
         var rankPanel = new WrapPanel(); foreach (var rank in ranks) { rankPanel.Children.Add(rank); AutomationProperties.SetName(rank, "Ранг " + rank.Tag); }
         body.Children.Add(Field("Ранг · можно выбрать несколько", rankPanel));
         Pair("Полная оценка", estimateMode, "Единицы", unit);
@@ -63,7 +69,7 @@ public sealed class TaskFiltersView : UserControl
         sort.SelectionChanged += (_, _) => UpdateDirection();
         estimateMode.SelectionChanged += (_, _) => estimateFrom.IsEnabled = estimateTo.IsEnabled = unit.IsEnabled = estimateMode.SelectedIndex == 0;
         deadlineMode.SelectionChanged += (_, _) => deadlineFrom.IsEnabled = deadlineTo.IsEnabled = deadlineMode.SelectedIndex == 0;
-        foreach (var box in new[] { sort, direction, status, estimateMode, deadlineMode, unit }) box.Style = (Style)FindResource("FilterChoice");
+        foreach (var box in new[] { sort, direction, status, estimateMode, deadlineMode, unit, calendarType }) box.Style = (Style)FindResource("FilterChoice");
         Populate(initial);
         UpdateDirection();
         SizeChanged += (_, _) => { foreach (var pair in pairs) pair.Stacked = ActualWidth < 430; };
@@ -72,6 +78,7 @@ public sealed class TaskFiltersView : UserControl
 
     private void Populate(TaskListSettings value)
     {
+        calendarType.SelectedIndex = (int)value.CalendarType;
         sort.SelectedIndex = (int)value.Sort; direction.SelectedIndex = value.Descending ? 1 : 0; status.SelectedIndex = (int)value.Status;
         foreach (var rank in ranks) rank.IsChecked = value.Ranks.Contains((ImportanceRank)rank.Tag);
         estimateMode.SelectedIndex = (int)value.EstimateMode; deadlineMode.SelectedIndex = (int)value.DeadlineMode; unit.SelectedIndex = 0;
@@ -88,7 +95,7 @@ public sealed class TaskFiltersView : UserControl
     private TaskListSettings Read() => new((TaskStatusFilter)status.SelectedIndex, (TaskSort)sort.SelectedIndex, direction.SelectedIndex == 1,
         (OptionalFieldFilter)estimateMode.SelectedIndex, estimateMode.SelectedIndex == 1 ? null : Minutes(estimateFrom), estimateMode.SelectedIndex == 1 ? null : Minutes(estimateTo),
         (OptionalFieldFilter)deadlineMode.SelectedIndex, deadlineMode.SelectedIndex == 1 ? null : ParseDate(deadlineFrom), deadlineMode.SelectedIndex == 1 ? null : ParseDate(deadlineTo), ParseDate(createdFrom), ParseDate(createdTo))
-        { Ranks = ranks.Where(x => x.IsChecked == true).Select(x => (ImportanceRank)x.Tag).ToArray() };
+        { Ranks = ranks.Where(x => x.IsChecked == true).Select(x => (ImportanceRank)x.Tag).ToArray(), CalendarType = (CalendarItemType)calendarType.SelectedIndex };
     private int? Minutes(TextBox input)
     {
         if (string.IsNullOrWhiteSpace(input.Text)) return null;

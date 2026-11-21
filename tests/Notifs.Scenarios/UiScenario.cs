@@ -12,13 +12,13 @@ namespace Notifs.Scenarios;
 
 internal static partial class UiScenario
 {
-    public static int Run(Application app, string databasePath, bool fieldsOnly = false, bool draftsOnly = false, bool notificationsOnly = false, bool signalsOnly = false, bool recurringOnly = false, bool summaryOnly = false, bool listsOnly = false, bool calendarOnly = false)
+    public static int Run(Application app, string databasePath, bool fieldsOnly = false, bool draftsOnly = false, bool notificationsOnly = false, bool signalsOnly = false, bool recurringOnly = false, bool summaryOnly = false, bool listsOnly = false, bool calendarOnly = false, bool featuresOnly = false, bool releaseOnly = false)
     {
         var result = 1;
         app.ShutdownMode = ShutdownMode.OnExplicitShutdown;
         app.Dispatcher.InvokeAsync(async () =>
         {
-            try { if (calendarOnly) await RunCalendarAsync(databasePath); else if (listsOnly) await RunTaskListsAsync(databasePath); else if (summaryOnly) await RunSummaryAsync(databasePath); else if (recurringOnly) await RunRecurringAsync(databasePath); else if (signalsOnly) await RunSignalsAsync(databasePath); else if (notificationsOnly) await RunNotificationsAsync(databasePath); else if (draftsOnly) await RunDraftsAsync(databasePath); else if (fieldsOnly) await RunFieldsAsync(databasePath); else { await RunTaskListsAsync(databasePath + ".lists"); await RunCalendarAsync(databasePath + ".calendar"); await RunAsync(databasePath); await RunDraftsAsync(databasePath + ".drafts"); await RunNotificationsAsync(databasePath + ".notifications"); await RunSignalsAsync(databasePath + ".signals"); await RunRecurringAsync(databasePath + ".recurring"); await RunSummaryAsync(databasePath + ".summary"); await BackgroundUiScenario.RunInSuiteAsync(Path.Combine(Path.GetDirectoryName(databasePath)!, "background-ui")); } result = 0; Console.WriteLine("PASS all requested WPF scenarios"); }
+            try { if (releaseOnly) await RunReleaseAsync(databasePath); else if (featuresOnly) await RunFeaturesAsync(databasePath); else if (calendarOnly) await RunCalendarAsync(databasePath); else if (listsOnly) await RunTaskListsAsync(databasePath); else if (summaryOnly) await RunSummaryAsync(databasePath); else if (recurringOnly) await RunRecurringAsync(databasePath); else if (signalsOnly) await RunSignalsAsync(databasePath); else if (notificationsOnly) await RunNotificationsAsync(databasePath); else if (draftsOnly) await RunDraftsAsync(databasePath); else if (fieldsOnly) await RunFieldsAsync(databasePath); else { await RunReleaseAsync(databasePath + ".release"); await RunFeaturesAsync(databasePath + ".features"); await RunTaskListsAsync(databasePath + ".lists"); await RunCalendarAsync(databasePath + ".calendar"); await RunAsync(databasePath); await RunDraftsAsync(databasePath + ".drafts"); await RunNotificationsAsync(databasePath + ".notifications"); await RunSignalsAsync(databasePath + ".signals"); await RunRecurringAsync(databasePath + ".recurring"); await RunSummaryAsync(databasePath + ".summary"); await BackgroundUiScenario.RunInSuiteAsync(Path.Combine(Path.GetDirectoryName(databasePath)!, "background-ui")); } result = 0; Console.WriteLine("PASS all requested WPF scenarios"); }
             catch (Exception ex) { Console.Error.WriteLine(ex); }
             finally { app.Shutdown(); }
         });
@@ -220,6 +220,15 @@ internal static partial class UiScenario
         Assert(command.CanExecute(null), "command is available");
         command.Execute(null);
         await UntilAsync(() => !model.IsBusy);
+    }
+    // Continuous operation must poll between clock steps; a large unobserved jump deliberately invokes recovery.
+    private static async Task AdvanceLiveAsync(Action<TimeSpan> advance, NotificationRuntime runtime, TimeSpan duration)
+    {
+        while (duration > TimeSpan.Zero)
+        {
+            var step = duration > TimeSpan.FromMinutes(1) ? TimeSpan.FromMinutes(1) : duration;
+            advance(step); await runtime.RunOnceAsync(); duration -= step;
+        }
     }
     private static Task IdleAsync() => Dispatcher.CurrentDispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle).Task;
     private static async Task SizeAsync(Window window, double width, double height)

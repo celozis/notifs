@@ -47,6 +47,7 @@ public sealed partial class TaskService
         personal?.Resolve(time.LocalTimeZone);
         using var connection = Open();
         using var transaction = connection.BeginTransaction();
+        var previousEstimate = id is { } originalId ? ReadEstimate(connection, transaction, originalId) : null;
         using var command = connection.CreateCommand();
         command.Transaction = transaction;
         command.CommandText = id is null
@@ -68,8 +69,11 @@ public sealed partial class TaskService
         command.CommandText = "DELETE FROM task_drafts WHERE draft_key=$key";
         command.Parameters.AddWithValue("$key", DraftKey(id));
         command.ExecuteNonQuery();
-        SavePersonal(connection, transaction, item.Id, personal);
+        var personalChanged = SavePersonal(connection, transaction, item.Id, personal);
+        if (id != null && previousEstimate != estimate) ResetQuestion(connection, transaction, item.Id, estimate);
         transaction.Commit();
+        if (id != null && previousEstimate != estimate) CheckInChanged?.Invoke(item.Id);
+        if (personalChanged) PersonalScheduleChanged?.Invoke(item.Id);
         return item;
     }
 }
